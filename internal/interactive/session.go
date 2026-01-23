@@ -7,12 +7,16 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/llaoj/aiassist/internal/config"
 	"github.com/llaoj/aiassist/internal/executor"
 	"github.com/llaoj/aiassist/internal/i18n"
 	"github.com/llaoj/aiassist/internal/llm"
+	"github.com/llaoj/aiassist/internal/prompt"
+	"github.com/llaoj/aiassist/internal/sysinfo"
+	"github.com/llaoj/aiassist/internal/ui"
 )
 
 // SessionMessage represents a message in the session
@@ -29,12 +33,21 @@ type Session struct {
 	stdin      io.Reader
 	cfg        *config.Config
 	translator *i18n.I18n
+	stopChan   chan bool
+	sysInfo    *sysinfo.SystemInfo
 }
 
 // NewSession creates a new interactive session
 func NewSession(manager *llm.Manager, cfg *config.Config, translator *i18n.I18n, stdin io.Reader) *Session {
 	if stdin == nil {
 		stdin = os.Stdin
+	}
+
+	// Load or collect system info
+	sysInfo, err := sysinfo.LoadOrCollect()
+	if err != nil {
+		// If failed, just log and continue without system info
+		color.Yellow("Warning: failed to load system info: %v\n", err)
 	}
 
 	return &Session{
@@ -44,6 +57,8 @@ func NewSession(manager *llm.Manager, cfg *config.Config, translator *i18n.I18n,
 		stdin:      stdin,
 		cfg:        cfg,
 		translator: translator,
+		stopChan:   make(chan bool, 1),
+		sysInfo:    sysInfo,
 	}
 }
 
@@ -52,13 +67,14 @@ func (s *Session) Run() error {
 	reader := bufio.NewReader(s.stdin)
 
 	// Display welcome message
-	color.Cyan("───────────────────────────────────────\n\n")
+
+	color.Cyan(ui.Separator() + "\n")
 	color.Cyan(s.translator.T("interactive.welcome") + "\n")
 	color.Cyan(s.translator.T("interactive.help_hint") + "\n")
-	color.Cyan("───────────────────────────────────────\n\n")
+	color.Cyan(ui.Separator() + "\n")
 
 	// Print current model status
-	s.llmManager.PrintStatus(s.cfg.GetLanguage())
+	s.llmManager.PrintStatus()
 
 	// Main interaction loop
 	for {
@@ -76,7 +92,7 @@ func (s *Session) Run() error {
 		}
 
 		// Handle special commands
-		if userInput == "exit" || userInput == "quit" {
+		if userInput == "exit" {
 			color.Cyan(s.translator.T("interactive.goodbye") + "\n")
 			break
 		}
@@ -94,11 +110,21 @@ func (s *Session) Run() error {
 		// Add user message to history
 		s.history = append(s.history, SessionMessage{Role: "user", Content: userInput})
 
-		// Call LLM
+		// Prepare user input with system context
+		userInputWithContext := userInput
+		if s.sysInfo != nil {
+			userInputWithContext = fmt.Sprintf("%s\n\n%s", s.sysInfo.FormatAsContext(), userInput)
+		}
+
+		// Call LLM with loading animation
 		ctx := context.Background()
-		response, modelUsed, err := s.llmManager.CallWithFallback(ctx, userInput, s.cfg.GetLanguage())
+		systemPrompt := prompt.GetInteractivePrompt()
+		s.startLoading()
+		response, modelUsed, err := s.llmManager.CallWithFallbackSystemPrompt(ctx, systemPrompt, userInputWithContext)
+		s.stopLoading()
+
 		if err != nil {
-			color.Red("❌ Error: %v\n", err)
+			color.Red("Error: %v\n", err)
 			continue
 		}
 
@@ -127,17 +153,26 @@ func (s *Session) RunWithPipe(input string) error {
 		return err
 	}
 
-	// Merge user input and pipe data
+	// Merge user input and pipe data with system context
 	var fullPrompt string
-	if s.cfg.GetLanguage() == config.LanguageChinese {
-		fullPrompt = fmt.Sprintf("用户问题: %s\n\n管道输出数据:\n%s", input, string(pipeData))
-	} else {
-		fullPrompt = fmt.Sprintf("User question: %s\n\nPipe output data:\n%s", input, string(pipeData))
+	sysContext := ""
+	if s.sysInfo != nil {
+		sysContext = s.sysInfo.FormatAsContext() + "\n"
 	}
 
-	// Call LLM
+	if s.cfg.GetLanguage() == config.LanguageChinese {
+		fullPrompt = fmt.Sprintf("%s用户问题: %s\n\n管道输出数据:\n%s", sysContext, input, string(pipeData))
+	} else {
+		fullPrompt = fmt.Sprintf("%sUser question: %s\n\nPipe output data:\n%s", sysContext, input, string(pipeData))
+	}
+
+	// Call LLM with pipe analysis prompt for standalone command analysis
 	ctx := context.Background()
-	response, modelUsed, err := s.llmManager.CallWithFallback(ctx, fullPrompt, s.cfg.GetLanguage())
+	systemPrompt := prompt.GetPipeAnalysisPrompt()
+	s.startLoading()
+	response, modelUsed, err := s.llmManager.CallWithFallbackSystemPrompt(ctx, systemPrompt, fullPrompt)
+	s.stopLoading()
+
 	if err != nil {
 		return err
 	}
@@ -155,69 +190,127 @@ func (s *Session) RunWithPipe(input string) error {
 }
 
 // handleCommands processes extracted commands
-func (s *Session) handleCommands(commands []string) {
+func (s *Session) handleCommands(commands []executor.Command) {
 	if len(commands) == 0 {
 		return
 	}
 
-	// Display found commands
-	color.Yellow("\n" + s.translator.T("interactive.commands_found") + "\n")
+	// Process each command one by one
 	for i, cmd := range commands {
-		fmt.Printf("%d. %s\n", i+1, cmd)
-	}
-
-	reader := bufio.NewReader(os.Stdin)
-	color.Yellow("\n" + s.translator.T("interactive.execute_prompt"))
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	if input != "yes" && input != "y" {
-		fmt.Println(s.translator.T("interactive.cancelled"))
-		return
-	}
-
-	// Execute commands
-	for _, cmd := range commands {
-		if !s.executor.DisplayCommand(cmd, false, s.translator) {
+		// Execute command with confirmation
+		if !s.executor.DisplayCommand(cmd.Text, cmd.Type, s.translator) {
+			color.Yellow("Skipped\n")
 			continue
 		}
 
-		output, err := s.executor.ExecuteCommand(cmd)
+		output, err := s.executor.ExecuteCommand(cmd.Text)
 		if err != nil {
 			color.Red(s.translator.T("executor.execute_failed", err) + "\n")
-		} else {
-			color.Green(s.translator.T("executor.execute_success") + "\n")
-			fmt.Println(output)
+			continue
 		}
 
-		// If there is command output, offer to continue analysis
-		if output != "" {
-			reader := bufio.NewReader(os.Stdin)
-			color.Yellow("\n" + s.translator.T("interactive.continue_prompt"))
-			continueInput, _ := reader.ReadString('\n')
-			continueInput = strings.TrimSpace(continueInput)
+		// Show execution output
+		color.Green(s.translator.T("executor.execute_success") + "\n")
+		fmt.Println(output)
 
-			if continueInput == "yes" || continueInput == "y" {
-				color.Yellow(s.translator.T("interactive.followup_prompt"))
-				nextQuestion, _ := reader.ReadString('\n')
-				nextQuestion = strings.TrimSpace(nextQuestion)
+		// After executing the first command, analyze output and continue
+		// For subsequent commands in the list, just execute them without analysis
+		if i == 0 && output != "" {
+			s.analyzeCommandOutput(cmd.Text, output)
+			// After analysis, we return to allow the next step's commands to be handled
+			return
+		}
+	}
+}
 
-				if nextQuestion != "" {
-					// Construct new prompt with command output context
-					var contextPrompt string
-					if s.cfg.GetLanguage() == config.LanguageChinese {
-						contextPrompt = fmt.Sprintf("前一条命令的输出: %s\n\n用户问题: %s", output, nextQuestion)
-					} else {
-						contextPrompt = fmt.Sprintf("Previous command output: %s\n\nUser question: %s", output, nextQuestion)
-					}
+// analyzeCommandOutput analyzes command output and continues the investigation
+func (s *Session) analyzeCommandOutput(cmd, output string) {
+	reader := bufio.NewReader(os.Stdin)
 
-					ctx := context.Background()
-					response, modelUsed, err := s.llmManager.CallWithFallback(ctx, contextPrompt, s.cfg.GetLanguage())
-					if err != nil {
-						color.Red("❌ Error: %v\n", err)
-					} else {
-						color.Cyan("\n[%s]: %s\n\n", modelUsed, response)
-					}
+	// Add command execution to history
+	executionMsg := fmt.Sprintf("[执行命令]\n%s\n\n[执行输出]\n%s", cmd, output)
+	s.history = append(s.history, SessionMessage{Role: "user", Content: executionMsg})
+
+	// Build complete conversation history for context
+	var fullContext string
+
+	// Add system context at the beginning
+	if s.sysInfo != nil {
+		fullContext = s.sysInfo.FormatAsContext() + "\n"
+	}
+
+	for _, msg := range s.history {
+		if msg.Role == "user" {
+			fullContext += fmt.Sprintf("[用户]: %s\n\n", msg.Content)
+		} else {
+			fullContext += fmt.Sprintf("[AI]: %s\n\n", msg.Content)
+		}
+	}
+
+	// Add instruction for next steps
+	var instructionPrompt string
+	if s.cfg.GetLanguage() == config.LanguageChinese {
+		instructionPrompt = fmt.Sprintf("%s\n根据以上完整的对话历史和已执行的命令输出，请继续进行接下来的分析和诊断，列出剩余的步骤和命令。", fullContext)
+	} else {
+		instructionPrompt = fmt.Sprintf("%s\nBased on the complete conversation history and the executed command output above, please continue with the next steps of analysis and diagnosis, listing the remaining steps and commands.", fullContext)
+	}
+
+	// Call LLM with continue analysis prompt to handle the output and proceed with next steps
+	ctx := context.Background()
+	systemPrompt := prompt.GetContinueAnalysisPrompt()
+	s.startLoading()
+	response, modelUsed, err := s.llmManager.CallWithFallbackSystemPrompt(ctx, systemPrompt, instructionPrompt)
+	s.stopLoading()
+
+	if err != nil {
+		color.Red("Error: %v\n", err)
+		return
+	}
+
+	// Add analysis to history
+	s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
+
+	// Display analysis
+	color.Cyan("\n[%s]: %s\n\n", modelUsed, response)
+
+	// Extract new commands from analysis
+	newCommands := s.executor.ExtractCommands(response)
+	if len(newCommands) > 0 {
+		// Recursively handle new commands
+		s.handleCommands(newCommands)
+	} else {
+		// No more commands, ask if user wants to continue
+		color.Yellow("所有分析步骤已完成。是否继续提问? (y/n): ")
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(strings.ToLower(input))
+
+		if input == "y" || input == "yes" {
+			color.Yellow("请输入后续问题: ")
+			nextQuestion, _ := reader.ReadString('\n')
+			nextQuestion = strings.TrimSpace(nextQuestion)
+
+			if nextQuestion != "" {
+				// Treat as new user input
+				s.history = append(s.history, SessionMessage{Role: "user", Content: nextQuestion})
+
+				ctx := context.Background()
+				systemPrompt := prompt.GetInteractivePrompt()
+				s.startLoading()
+				response, modelUsed, err := s.llmManager.CallWithFallbackSystemPrompt(ctx, systemPrompt, nextQuestion)
+				s.stopLoading()
+
+				if err != nil {
+					color.Red("Error: %v\n", err)
+					return
+				}
+
+				s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
+				color.Cyan("\n[%s]: %s\n\n", modelUsed, response)
+
+				// Extract and handle new commands from this response
+				newCommands := s.executor.ExtractCommands(response)
+				if len(newCommands) > 0 {
+					s.handleCommands(newCommands)
 				}
 			}
 		}
@@ -257,4 +350,56 @@ func (s *Session) printHistory() {
 	}
 
 	color.Cyan("───────────────────────────────────────\n\n")
+}
+
+// startLoading displays an animated loading message
+func (s *Session) startLoading() {
+	// Check if stdout is a terminal (TTY)
+	// Only show animation in interactive mode, not in pipes
+	stat, err := os.Stdout.Stat()
+	if err != nil || (stat.Mode()&os.ModeCharDevice) == 0 {
+		// Not a TTY (e.g., piped output), skip animation
+		return
+	}
+
+	// Create a new channel for this loading session
+	done := make(chan bool)
+	s.stopChan = done
+
+	go func() {
+		message := s.translator.T("interactive.thinking")
+
+		dots := 0
+		ticker := time.NewTicker(300 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-done:
+				// Clear the loading line
+				fmt.Fprintf(os.Stdout, "\r%s\r", strings.Repeat(" ", 100))
+				return
+			case <-ticker.C:
+				dots = (dots % 3) + 1
+				dotStr := strings.Repeat(".", dots)
+				// Output with green color
+				fmt.Fprintf(os.Stdout, "\r")
+				color.Green("%s%s", message, dotStr)
+				os.Stdout.Sync()
+			}
+		}
+	}()
+
+	// Give goroutine time to start
+	time.Sleep(100 * time.Millisecond)
+}
+
+// stopLoading stops the loading animation
+func (s *Session) stopLoading() {
+	select {
+	case s.stopChan <- true:
+	default:
+	}
+	// Give a moment for the goroutine to finish
+	time.Sleep(200 * time.Millisecond)
 }

@@ -5,29 +5,31 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/llaoj/aiassist/internal/config"
+	"github.com/llaoj/aiassist/internal/i18n"
 )
 
-// Manager 管理多个 LLM 提供商的生命周期
+// Manager manages the lifecycle of multiple LLM providers
 type Manager struct {
-	providers map[string]ModelProvider
-	priority  map[string]int
-	mu        sync.RWMutex
-	config    *config.Config
+	providers  map[string]ModelProvider
+	priority   map[string]int
+	mu         sync.RWMutex
+	config     *config.Config
+	translator *i18n.I18n
 }
 
-// NewManager 创建新的 LLM 管理器
+// NewManager creates a new LLM manager
 func NewManager(cfg *config.Config) *Manager {
 	return &Manager{
-		providers: make(map[string]ModelProvider),
-		priority:  make(map[string]int),
-		config:    cfg,
+		providers:  make(map[string]ModelProvider),
+		priority:   make(map[string]int),
+		config:     cfg,
+		translator: i18n.New(cfg.GetLanguage()),
 	}
 }
 
-// RegisterProvider 注册一个 LLM 提供商
+// RegisterProvider registers an LLM provider
 func (m *Manager) RegisterProvider(name string, provider ModelProvider, priority int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -36,60 +38,74 @@ func (m *Manager) RegisterProvider(name string, provider ModelProvider, priority
 	m.priority[name] = priority
 }
 
-// CallWithFallback 调用主模型，失败时自动切换到备用模型
+// CallWithFallback calls the primary model, automatically switching to fallback models on failure
 func (m *Manager) CallWithFallback(ctx context.Context, prompt string) (string, string, error) {
+	return m.CallWithFallbackSystemPrompt(ctx, "", prompt)
+}
+
+// CallWithFallbackSystemPrompt calls the primary model with system prompt support, automatically switching to fallback models on failure
+func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt string, userPrompt string) (string, string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// 获取按优先级排序的可用提供商
+	// Get available providers sorted by priority
 	available := m.getAvailableProviders()
 	if len(available) == 0 {
-		return "", "", fmt.Errorf("没有可用的 LLM 提供商")
+		return "", "", fmt.Errorf("no available LLM providers")
 	}
 
 	var lastErr error
 	for _, providerName := range available {
 		provider := m.providers[providerName]
 
-		// 检查超时上下文
+		// Check timeout context
 		select {
 		case <-ctx.Done():
 			return "", "", ctx.Err()
 		default:
 		}
 
-		// 尝试调用
-		response, err := provider.Call(ctx, prompt)
+		// Attempt to call
+		var response string
+		var err error
+
+		// If provider supports system prompt, use the version with system prompt
+		if compatProvider, ok := provider.(*OpenAICompatibleProvider); ok && systemPrompt != "" {
+			response, err = compatProvider.CallWithSystemPrompt(ctx, systemPrompt, userPrompt)
+		} else {
+			response, err = provider.Call(ctx, userPrompt)
+		}
+
 		if err != nil {
 			lastErr = err
-			fmt.Printf("[警告] %s 调用失败，尝试下一个模型: %v\n", providerName, err)
+			fmt.Printf("[Warning] %s call failed, trying next model: %v\n", providerName, err)
 			continue
 		}
 
 		return response, providerName, nil
 	}
 
-	return "", "", fmt.Errorf("所有模型调用失败: %w", lastErr)
+	return "", "", fmt.Errorf("all model calls failed: %w", lastErr)
 }
 
-// CallSpecific 调用指定模型
+// CallSpecific calls a specific model
 func (m *Manager) CallSpecific(ctx context.Context, modelName string, prompt string) (string, error) {
 	m.mu.RLock()
 	provider, exists := m.providers[modelName]
 	m.mu.RUnlock()
 
 	if !exists {
-		return "", fmt.Errorf("模型 %s 不存在", modelName)
+		return "", fmt.Errorf("model %s does not exist", modelName)
 	}
 
 	if !provider.IsAvailable() {
-		return "", fmt.Errorf("模型 %s 额度已用尽或不可用", modelName)
+		return "", fmt.Errorf("model %s quota exhausted or unavailable", modelName)
 	}
 
 	return provider.Call(ctx, prompt)
 }
 
-// GetAvailableProviders 获取可用的提供商列表（按优先级排序）
+// GetAvailableProviders gets the list of available providers (sorted by priority)
 func (m *Manager) getAvailableProviders() []string {
 	type providerWithPriority struct {
 		name     string
@@ -107,7 +123,7 @@ func (m *Manager) getAvailableProviders() []string {
 		}
 	}
 
-	// 按优先级排序（降序）
+	// Sort by priority (descending)
 	sort.Slice(available, func(i, j int) bool {
 		return available[i].priority > available[j].priority
 	})
@@ -120,7 +136,7 @@ func (m *Manager) getAvailableProviders() []string {
 	return result
 }
 
-// GetStatus 获取所有提供商的状态信息
+// GetStatus gets status information for all providers
 func (m *Manager) GetStatus() map[string]map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -139,45 +155,35 @@ func (m *Manager) GetStatus() map[string]map[string]interface{} {
 	return status
 }
 
-// ResetDailyQuota 重置每日调用配额（应在每天的指定时间调用）
+// ResetDailyQuota resets daily call quota (should be called at a specified time each day)
 func (m *Manager) ResetDailyQuota() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	for name, modelCfg := range m.config.Models {
-		if !modelCfg.Enabled {
-			continue
-		}
-
-		if _, exists := m.providers[name]; exists {
-			modelCfg.CurrentCalls = 0
-			modelCfg.LastResetTime = time.Now().Unix()
-		}
-	}
-
+	// In the new architecture, provider quota management is handled by the LLM API service
+	// This method is reserved for future expansion
 	return m.config.Save()
 }
 
-// PrintStatus 打印当前模型状态到终端
+// PrintStatus prints the current model status to the terminal
 func (m *Manager) PrintStatus() {
 	status := m.GetStatus()
 
-	fmt.Println("\n当前模型状态:")
-	fmt.Println("─────────────────────────────────────────")
+	fmt.Println("\n[" + m.translator.T("llm.status_title") + "]")
 
 	for modelName, info := range status {
 		available := info["available"].(bool)
 		remainingCalls := info["remaining_calls"].(int)
 		priority := info["priority"].(int)
 
-		statusStr := "✓ 可用"
+		statusStr := m.translator.T("llm.status_available")
 		if !available {
-			statusStr = "✗ 不可用"
+			statusStr = m.translator.T("llm.status_unavailable")
 		}
 
-		fmt.Printf("%s: %s | 剩余额度: %d | 优先级: %d\n",
-			modelName, statusStr, remainingCalls, priority)
+		fmt.Printf("- %s: %s | %s: %d | %s: %d\n",
+			modelName, statusStr, m.translator.T("llm.remaining_calls"), remainingCalls, m.translator.T("llm.priority"), priority)
 	}
 
-	fmt.Println("─────────────────────────────────────────\n")
+	fmt.Println()
 }

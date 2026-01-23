@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v3"
@@ -15,25 +16,22 @@ const (
 	LanguageChinese = "zh"
 )
 
-// ModelConfig represents model configuration
-type ModelConfig struct {
-	Name          string `yaml:"name"`
-	APIKey        string `yaml:"api_key"`
-	Priority      int    `yaml:"priority"`
-	MaxCalls      int    `yaml:"max_calls_per_day"`
-	CurrentCalls  int    `yaml:"current_calls"`
-	LastResetTime int64  `yaml:"last_reset_time"`
-	Enabled       bool   `yaml:"enabled"`
+// ProviderConfig represents a single LLM provider configuration
+type ProviderConfig struct {
+	Name     string   `yaml:"name"`
+	BaseURL  string   `yaml:"base_url"`
+	APIKey   string   `yaml:"api_key"`
+	Models   []string `yaml:"models"`
+	Priority int      `yaml:"priority"`
+	Enabled  bool     `yaml:"enabled"`
 }
 
 // Config represents global configuration
 type Config struct {
-	Language       string                  `yaml:"language"`
-	Proxy          string                  `yaml:"proxy"`
-	MaxConcurrency int                     `yaml:"max_concurrency"`
-	DefaultModel   string                  `yaml:"default_model"`
-	DailyResetHour int                     `yaml:"daily_reset_hour"`
-	Models         map[string]*ModelConfig `yaml:"models"`
+	Language     string                     `yaml:"language"`
+	HTTPProxy    string                     `yaml:"http_proxy"`
+	DefaultModel string                     `yaml:"default_model"`
+	Providers    map[string]*ProviderConfig `yaml:"providers"`
 
 	ConfigDir  string       `yaml:"-"`
 	ConfigFile string       `yaml:"-"`
@@ -60,14 +58,12 @@ func Init() error {
 
 	// Initialize config structure
 	globalConfig = &Config{
-		Language:       LanguageEnglish,
-		MaxConcurrency: 5,
-		DailyResetHour: 0,
-		Proxy:          "",
-		DefaultModel:   "",
-		Models:         make(map[string]*ModelConfig),
-		ConfigDir:      configDir,
-		ConfigFile:     configFile,
+		Language:     LanguageEnglish,
+		HTTPProxy:    "",
+		DefaultModel: "",
+		Providers:    make(map[string]*ProviderConfig),
+		ConfigDir:    configDir,
+		ConfigFile:   configFile,
 	}
 
 	// Load config file if it exists
@@ -110,6 +106,11 @@ func (c *Config) Save() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	return c.save()
+}
+
+// save saves configuration to file (internal, caller must hold lock)
+func (c *Config) save() error {
 	data, err := yaml.Marshal(c)
 	if err != nil {
 		return fmt.Errorf("failed to serialize config: %w", err)
@@ -122,78 +123,79 @@ func (c *Config) Save() error {
 	return nil
 }
 
-// AddModel adds a model configuration
-func (c *Config) AddModel(name string, modelConfig *ModelConfig) error {
+// AddProvider adds a provider configuration
+func (c *Config) AddProvider(providerName string, provider *ProviderConfig) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.Models == nil {
-		c.Models = make(map[string]*ModelConfig)
+	if c.Providers == nil {
+		c.Providers = make(map[string]*ProviderConfig)
 	}
 
-	c.Models[name] = modelConfig
-	return c.Save()
+	c.Providers[providerName] = provider
+	return c.save()
 }
 
-// GetModel gets a model configuration
-func (c *Config) GetModel(name string) *ModelConfig {
+// GetProvider gets a provider configuration
+func (c *Config) GetProvider(name string) *ProviderConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	return c.Models[name]
+	return c.Providers[name]
 }
 
-// GetEnabledModels returns list of enabled models
-func (c *Config) GetEnabledModels() []*ModelConfig {
+// GetEnabledProviders returns list of enabled providers
+func (c *Config) GetEnabledProviders() []*ProviderConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	enabled := make([]*ModelConfig, 0)
-	for _, model := range c.Models {
-		if model.Enabled {
-			enabled = append(enabled, model)
+	enabled := make([]*ProviderConfig, 0)
+	for _, provider := range c.Providers {
+		if provider.Enabled {
+			enabled = append(enabled, provider)
 		}
 	}
 
 	return enabled
 }
 
-// UpdateModelCalls updates model call count
-func (c *Config) UpdateModelCalls(modelName string, increment bool) error {
+// DeleteProvider removes a provider configuration
+func (c *Config) DeleteProvider(providerName string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	model, ok := c.Models[modelName]
-	if !ok {
-		return fmt.Errorf("model %s not found", modelName)
+	if c.Providers == nil {
+		return fmt.Errorf("no providers configured")
 	}
 
-	if increment {
-		model.CurrentCalls++
-	} else {
-		if model.CurrentCalls > 0 {
-			model.CurrentCalls--
-		}
+	if _, exists := c.Providers[providerName]; !exists {
+		return fmt.Errorf("provider %s not found", providerName)
 	}
 
-	return c.Save()
+	// If this was the default model, clear it
+	if strings.HasPrefix(c.DefaultModel, providerName+"/") {
+		c.DefaultModel = ""
+	}
+
+	delete(c.Providers, providerName)
+	return c.save()
 }
 
-// SetProxy sets the global proxy
-func (c *Config) SetProxy(proxy string) error {
+// SetHTTPProxy sets the HTTP proxy address
+func (c *Config) SetHTTPProxy(proxy string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.Proxy = proxy
-	return c.Save()
+	c.HTTPProxy = proxy
+	return c.save()
 }
 
-// GetProxy returns the configured proxy address
-func (c *Config) GetProxy() string {
+// GetHTTPProxy returns the configured HTTP proxy address
+func (c *Config) GetHTTPProxy() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	return c.Proxy
+	return c.HTTPProxy
 }
 
 // SetLanguage sets the language preference
@@ -206,7 +208,7 @@ func (c *Config) SetLanguage(lang string) error {
 	}
 
 	c.Language = lang
-	return c.Save()
+	return c.save()
 }
 
 // GetLanguage returns the language preference
@@ -215,13 +217,6 @@ func (c *Config) GetLanguage() string {
 	defer c.mu.RUnlock()
 
 	return c.Language
-}
-
-// ValidateAPIKey validates API Key
-func (c *Config) ValidateAPIKey(modelName, apiKey string) (bool, error) {
-	// This should implement actual API Key validation logic
-	// Send a lightweight test request to the model's API to verify the Key
-	return true, nil
 }
 
 // ConfigExists checks if configuration file exists

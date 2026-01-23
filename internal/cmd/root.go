@@ -21,7 +21,6 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	// Add subcommands
-	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(versionCmd)
 }
 

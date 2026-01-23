@@ -22,9 +22,9 @@ func interactiveMode() {
 		os.Exit(1)
 	}
 
-	// Check if any models are configured
-	enabledModels := cfg.GetEnabledModels()
-	if len(enabledModels) == 0 {
+	// Check if any providers are configured
+	enabledProviders := cfg.GetEnabledProviders()
+	if len(enabledProviders) == 0 {
 		color.Red(translator.T("error.no_models") + "\n")
 		fmt.Println(translator.T("error.hint_no_models"))
 		os.Exit(1)
@@ -33,23 +33,19 @@ func interactiveMode() {
 	// Initialize LLM manager
 	manager := llm.NewManager(cfg)
 
-	// Register configured models
-	for _, modelCfg := range enabledModels {
-		var provider llm.ModelProvider
-
-		switch modelCfg.Name {
-		case translator.T("model.qianwen"):
-			provider = llm.NewQianWenProvider(modelCfg.APIKey)
-		case translator.T("model.chatgpt"):
-			provider = llm.NewChatGPTProvider(modelCfg.APIKey, cfg.Proxy)
-		case translator.T("model.deepseek"):
-			provider = llm.NewDeepSeekProvider(modelCfg.APIKey)
-		default:
-			color.Yellow(translator.T("error.unknown_model", modelCfg.Name) + "\n")
-			continue
+	// Register configured providers as OpenAI-compatible providers
+	// For each provider with multiple models, create separate provider instances
+	for _, provider := range enabledProviders {
+		for _, model := range provider.Models {
+			providerKey := fmt.Sprintf("%s/%s", provider.Name, model)
+			llmProvider := llm.NewOpenAICompatibleProvider(
+				providerKey,
+				provider.BaseURL,
+				provider.APIKey,
+				model,
+			)
+			manager.RegisterProvider(providerKey, llmProvider, provider.Priority)
 		}
-
-		manager.RegisterProvider(modelCfg.Name, provider, modelCfg.Priority)
 	}
 
 	// Create interactive session
@@ -65,13 +61,13 @@ func interactiveMode() {
 		}
 
 		if err := session.RunWithPipe(input); err != nil {
-			color.Red("❌ Error: %v\n", err)
+			color.Red("Error: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
 		// Interactive mode
 		if err := session.Run(); err != nil {
-			color.Red("❌ Error: %v\n", err)
+			color.Red("Error: %v\n", err)
 			os.Exit(1)
 		}
 	}
