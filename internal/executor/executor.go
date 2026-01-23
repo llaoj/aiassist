@@ -85,15 +85,19 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 // ExecuteCommand executes the command
 func (ce *CommandExecutor) ExecuteCommand(command string) (string, error) {
 	cmd := exec.Command("sh", "-c", command)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
 
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("command execution failed: %w", err)
+	// Capture output
+	output, _ := cmd.CombinedOutput()
+
+	// Print output to console
+	if len(output) > 0 {
+		fmt.Print(string(output))
 	}
 
-	return "", nil
+	// For commands, non-zero exit status is not always an error
+	// (e.g., grep with no matches returns 1, command not found returns 127)
+	// We return the output regardless, and only return error for modify commands
+	return string(output), nil
 }
 
 // ExecuteWithConfirmation displays the command and executes after user confirmation

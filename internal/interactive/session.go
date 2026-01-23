@@ -131,8 +131,9 @@ func (s *Session) Run() error {
 		// Add assistant message to history
 		s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
 
-		// Display response
-		color.Cyan("\n[%s]: %s\n\n", modelUsed, response)
+		// Display response with model name on separate line
+		color.Cyan("\n[%s]\n", modelUsed)
+		color.Cyan("%s\n\n", response)
 
 		// Extract and execute commands from response
 		commands := s.executor.ExtractCommands(response)
@@ -177,8 +178,9 @@ func (s *Session) RunWithPipe(input string) error {
 		return err
 	}
 
-	// Display response
-	fmt.Printf("[%s]: %s\n", modelUsed, response)
+	// Display response with model name on separate line
+	color.Cyan("\n[%s]\n", modelUsed)
+	color.Cyan("%s\n", response)
 
 	// Extract and process commands from response
 	commands := s.executor.ExtractCommands(response)
@@ -209,13 +211,17 @@ func (s *Session) handleCommands(commands []executor.Command) {
 			continue
 		}
 
-		// Show execution output
+		// Show execution success message
 		color.Green(s.translator.T("executor.execute_success") + "\n")
-		fmt.Println(output)
+
+		// Handle empty output - tell AI explicitly
+		if output == "" {
+			output = s.translator.T("executor.no_output")
+		}
 
 		// After executing the first command, analyze output and continue
-		// For subsequent commands in the list, just execute them without analysis
-		if i == 0 && output != "" {
+		// Always trigger analysis for the first command, even if output is empty
+		if i == 0 {
 			s.analyzeCommandOutput(cmd.Text, output)
 			// After analysis, we return to allow the next step's commands to be handled
 			return
@@ -270,8 +276,9 @@ func (s *Session) analyzeCommandOutput(cmd, output string) {
 	// Add analysis to history
 	s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
 
-	// Display analysis
-	color.Cyan("\n[%s]: %s\n\n", modelUsed, response)
+	// Display analysis with model name on separate line
+	color.Cyan("\n[%s]\n", modelUsed)
+	color.Cyan("%s\n\n", response)
 
 	// Extract new commands from analysis
 	newCommands := s.executor.ExtractCommands(response)
@@ -305,8 +312,8 @@ func (s *Session) analyzeCommandOutput(cmd, output string) {
 				}
 
 				s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
-				color.Cyan("\n[%s]: %s\n\n", modelUsed, response)
-
+				color.Cyan("\n[%s]\n", modelUsed)
+				color.Cyan("%s\n\n", response)
 				// Extract and handle new commands from this response
 				newCommands := s.executor.ExtractCommands(response)
 				if len(newCommands) > 0 {
@@ -369,7 +376,7 @@ func (s *Session) startLoading() {
 	go func() {
 		message := s.translator.T("interactive.thinking")
 
-		dots := 0
+		dots := -1
 		ticker := time.NewTicker(300 * time.Millisecond)
 		defer ticker.Stop()
 
@@ -380,11 +387,13 @@ func (s *Session) startLoading() {
 				fmt.Fprintf(os.Stdout, "\r%s\r", strings.Repeat(" ", 100))
 				return
 			case <-ticker.C:
-				dots = (dots % 3) + 1
+				dots = (dots + 1) % 4
 				dotStr := strings.Repeat(".", dots)
-				// Output with green color
+				// Clear line and reprint with updated dots
 				fmt.Fprintf(os.Stdout, "\r")
-				color.Green("%s%s", message, dotStr)
+				// Use color.New to avoid automatic newline
+				greenPrinter := color.New(color.FgGreen)
+				greenPrinter.Printf("%s%s", message, dotStr)
 				os.Stdout.Sync()
 			}
 		}

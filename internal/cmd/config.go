@@ -178,23 +178,22 @@ func addProviderInteractive() {
 		}
 	}
 
-	// Get current max priority
-	allProviders := cfg.GetEnabledProviders()
-	maxPriority := 1
-	for _, p := range allProviders {
-		if p.Priority >= maxPriority {
-			maxPriority = p.Priority + 1
+	// Convert string list to ModelConfig list
+	modelConfigs := make([]*config.ModelConfig, len(modelList))
+	for i, modelName := range modelList {
+		modelConfigs[i] = &config.ModelConfig{
+			Name:    modelName,
+			Enabled: true,
 		}
 	}
 
 	// Add provider configuration
 	providerCfg := &config.ProviderConfig{
-		Name:     providerName,
-		BaseURL:  baseURL,
-		APIKey:   apiKey,
-		Models:   modelList,
-		Priority: maxPriority,
-		Enabled:  true,
+		Name:    providerName,
+		BaseURL: baseURL,
+		APIKey:  apiKey,
+		Models:  modelConfigs,
+		Enabled: true,
 	}
 
 	if err := cfg.AddProvider(providerName, providerCfg); err != nil {
@@ -203,7 +202,9 @@ func addProviderInteractive() {
 	}
 
 	color.Green(fmt.Sprintf("✓ Provider '%s' added successfully\n", providerName))
-	fmt.Printf("Models: %v\n\n", modelList)
+	fmt.Printf("Models: %v\n", modelList)
+	color.Yellow("\n提示: 模型的调用顺序按照配置文件中的顺序。当一个模型不可用时，将自动尝试下一个模型。\n")
+	color.Yellow("Tip: Model invocation follows the order in the config file. When a model is unavailable, the next one will be tried automatically.\n\n")
 }
 
 func deleteProviderInteractive() {
@@ -291,8 +292,7 @@ func listProviders() {
 		}
 		fmt.Printf("%d. %s [%s]\n", i+1, p.Name, status)
 		fmt.Printf("   Base URL: %s\n", p.BaseURL)
-		fmt.Printf("   Models: %v\n", p.Models)
-		fmt.Printf("   Priority: %d\n\n", p.Priority)
+		fmt.Printf("   Models: %v\n\n", getModelNames(p.Models))
 	}
 }
 
@@ -428,14 +428,22 @@ func interactiveConfig() error {
 			}
 		}
 
+		// Convert string list to ModelConfig list
+		modelConfigs := make([]*config.ModelConfig, len(modelList))
+		for i, modelName := range modelList {
+			modelConfigs[i] = &config.ModelConfig{
+				Name:    modelName,
+				Enabled: true,
+			}
+		}
+
 		// Add provider configuration
 		providerCfg := &config.ProviderConfig{
-			Name:     providerName,
-			BaseURL:  baseURL,
-			APIKey:   apiKey,
-			Models:   modelList,
-			Priority: providerCount,
-			Enabled:  true,
+			Name:    providerName,
+			BaseURL: baseURL,
+			APIKey:  apiKey,
+			Models:  modelConfigs,
+			Enabled: true,
 		}
 		cfg.AddProvider(providerName, providerCfg)
 		fmt.Printf("%s\n", translator.T("config.openai_compat.success", providerName))
@@ -468,8 +476,8 @@ func interactiveConfig() error {
 
 		for _, p := range enabledProviders {
 			for _, m := range p.Models {
-				fmt.Printf("%d. %s/%s\n", idx, p.Name, m)
-				allModels = append(allModels, modelOption{index: idx, provider: p.Name, model: m})
+				fmt.Printf("%d. %s/%s\n", idx, p.Name, m.Name)
+				allModels = append(allModels, modelOption{index: idx, provider: p.Name, model: m.Name})
 				idx++
 			}
 		}
@@ -527,6 +535,15 @@ func interactiveConfig() error {
 	fmt.Printf("%s\n\n", ui.Separator())
 
 	return nil
+}
+
+// getModelNames extracts model names from ModelConfig list
+func getModelNames(models []*config.ModelConfig) []string {
+	names := make([]string, len(models))
+	for i, m := range models {
+		names[i] = m.Name
+	}
+	return names
 }
 
 // selectLanguage prompts user to select language preference

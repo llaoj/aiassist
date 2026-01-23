@@ -16,14 +16,19 @@ const (
 	LanguageChinese = "zh"
 )
 
+// ModelConfig represents a single model configuration
+type ModelConfig struct {
+	Name    string `yaml:"name"`
+	Enabled bool   `yaml:"enabled"`
+}
+
 // ProviderConfig represents a single LLM provider configuration
 type ProviderConfig struct {
-	Name     string   `yaml:"name"`
-	BaseURL  string   `yaml:"base_url"`
-	APIKey   string   `yaml:"api_key"`
-	Models   []string `yaml:"models"`
-	Priority int      `yaml:"priority"`
-	Enabled  bool     `yaml:"enabled"`
+	Name    string         `yaml:"name"`
+	BaseURL string         `yaml:"base_url"`
+	APIKey  string         `yaml:"api_key"`
+	Models  []*ModelConfig `yaml:"models"`
+	Enabled bool           `yaml:"enabled"`
 }
 
 // Config represents global configuration

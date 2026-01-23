@@ -35,16 +35,22 @@ func interactiveMode() {
 
 	// Register configured providers as OpenAI-compatible providers
 	// For each provider with multiple models, create separate provider instances
+	// Order matters: providers and models will be tried in config file order
 	for _, provider := range enabledProviders {
-		for _, model := range provider.Models {
-			providerKey := fmt.Sprintf("%s/%s", provider.Name, model)
+		for _, modelCfg := range provider.Models {
+			// Skip disabled models
+			if !modelCfg.Enabled {
+				continue
+			}
+
+			providerKey := fmt.Sprintf("%s/%s", provider.Name, modelCfg.Name)
 			llmProvider := llm.NewOpenAICompatibleProvider(
 				providerKey,
 				provider.BaseURL,
 				provider.APIKey,
-				model,
+				modelCfg.Name,
 			)
-			manager.RegisterProvider(providerKey, llmProvider, provider.Priority)
+			manager.RegisterProvider(providerKey, llmProvider)
 		}
 	}
 

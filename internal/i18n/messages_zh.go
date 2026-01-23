@@ -69,10 +69,11 @@ var ChineseMessages = map[string]string{
 	"executor.unclassified_command": "? 未分类命令:",
 	"executor.execute_prompt":       "是否执行此命令? (yes/no): ",
 	"executor.modify_warning":       "!!! 警告: 该命令将修改服务器配置，是否确定执行? (yes/no): ",
-	"executor.execute_success":      "✓ 执行成功:",
+	"executor.execute_success":      "✓ 执行成功",
 	"executor.execute_failed":       "✗ 执行失败: %v",
 	"executor.confirm_execution":    "发现待执行命令:",
 	"executor.confirm_prompt":       "是否执行? (y/n, 默认: y): ",
+	"executor.no_output":            "(命令执行成功，但没有输出)",
 
 	// Error messages
 	"error.no_models":      "✗ 错误: 未配置任何模型",

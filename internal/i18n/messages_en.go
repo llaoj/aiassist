@@ -69,10 +69,11 @@ var EnglishMessages = map[string]string{
 	"executor.unclassified_command": "? Unclassified command:",
 	"executor.execute_prompt":       "Execute this command? (yes/no): ",
 	"executor.modify_warning":       "!!! Warning: This command will modify server configuration, are you sure? (yes/no): ",
-	"executor.execute_success":      "✓ Execution successful:",
+	"executor.execute_success":      "✓ Execution successful",
 	"executor.execute_failed":       "✗ Execution failed: %v",
 	"executor.confirm_execution":    "Found command to execute:",
 	"executor.confirm_prompt":       "Execute? (y/n, default: y): ",
+	"executor.no_output":            "(Command executed successfully, but no output)",
 
 	// Error messages
 	"error.no_models":      "✗ Error: No models configured",

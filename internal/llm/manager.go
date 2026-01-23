@@ -3,7 +3,6 @@ package llm
 import (
 	"context"
 	"fmt"
-	"sort"
 	"sync"
 
 	"github.com/llaoj/aiassist/internal/config"
@@ -12,30 +11,44 @@ import (
 
 // Manager manages the lifecycle of multiple LLM providers
 type Manager struct {
-	providers  map[string]ModelProvider
-	priority   map[string]int
-	mu         sync.RWMutex
-	config     *config.Config
-	translator *i18n.I18n
+	providers     map[string]ModelProvider
+	providerOrder []string // Order of providers from config file
+	mu            sync.RWMutex
+	config        *config.Config
+	translator    *i18n.I18n
+	modelEnabled  map[string]bool // Track enabled status for each model
 }
 
 // NewManager creates a new LLM manager
 func NewManager(cfg *config.Config) *Manager {
 	return &Manager{
-		providers:  make(map[string]ModelProvider),
-		priority:   make(map[string]int),
-		config:     cfg,
-		translator: i18n.New(cfg.GetLanguage()),
+		providers:     make(map[string]ModelProvider),
+		providerOrder: make([]string, 0),
+		modelEnabled:  make(map[string]bool),
+		config:        cfg,
+		translator:    i18n.New(cfg.GetLanguage()),
 	}
 }
 
 // RegisterProvider registers an LLM provider
-func (m *Manager) RegisterProvider(name string, provider ModelProvider, priority int) {
+func (m *Manager) RegisterProvider(name string, provider ModelProvider) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	m.providers[name] = provider
-	m.priority[name] = priority
+	// Add to order if not already present
+	found := false
+	for _, n := range m.providerOrder {
+		if n == name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		m.providerOrder = append(m.providerOrder, name)
+	}
+	// Initialize model as enabled
+	m.modelEnabled[name] = true
 }
 
 // CallWithFallback calls the primary model, automatically switching to fallback models on failure
@@ -105,35 +118,46 @@ func (m *Manager) CallSpecific(ctx context.Context, modelName string, prompt str
 	return provider.Call(ctx, prompt)
 }
 
-// GetAvailableProviders gets the list of available providers (sorted by priority)
+// GetAvailableProviders gets the list of available providers (in config order)
 func (m *Manager) getAvailableProviders() []string {
-	type providerWithPriority struct {
-		name     string
-		priority int
-	}
+	var available []string
 
-	var available []providerWithPriority
-
-	for name, provider := range m.providers {
-		if provider.IsAvailable() {
-			available = append(available, providerWithPriority{
-				name:     name,
-				priority: m.priority[name],
-			})
+	// Return providers in the order they were registered (config file order)
+	for _, name := range m.providerOrder {
+		provider, exists := m.providers[name]
+		if !exists {
+			continue
+		}
+		// Check both provider availability and model enabled status
+		if provider.IsAvailable() && m.isModelEnabled(name) {
+			available = append(available, name)
 		}
 	}
 
-	// Sort by priority (descending)
-	sort.Slice(available, func(i, j int) bool {
-		return available[i].priority > available[j].priority
-	})
+	return available
+}
 
-	result := make([]string, len(available))
-	for i, p := range available {
-		result[i] = p.name
+// isModelEnabled checks if a model is enabled
+func (m *Manager) isModelEnabled(modelName string) bool {
+	enabled, exists := m.modelEnabled[modelName]
+	if !exists {
+		return true // Default to enabled if not set
 	}
+	return enabled
+}
 
-	return result
+// DisableModel marks a model as disabled
+func (m *Manager) DisableModel(modelName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.modelEnabled[modelName] = false
+}
+
+// EnableModel marks a model as enabled
+func (m *Manager) EnableModel(modelName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.modelEnabled[modelName] = true
 }
 
 // GetStatus gets status information for all providers
@@ -144,11 +168,12 @@ func (m *Manager) GetStatus() map[string]map[string]interface{} {
 	status := make(map[string]map[string]interface{})
 
 	for name, provider := range m.providers {
+		isAvailable := provider.IsAvailable() && m.isModelEnabled(name)
 		status[name] = map[string]interface{}{
 			"name":            provider.GetName(),
-			"available":       provider.IsAvailable(),
+			"available":       isAvailable,
 			"remaining_calls": provider.GetRemainingCalls(),
-			"priority":        m.priority[name],
+			"enabled":         m.isModelEnabled(name),
 		}
 	}
 
@@ -174,15 +199,14 @@ func (m *Manager) PrintStatus() {
 	for modelName, info := range status {
 		available := info["available"].(bool)
 		remainingCalls := info["remaining_calls"].(int)
-		priority := info["priority"].(int)
 
 		statusStr := m.translator.T("llm.status_available")
 		if !available {
 			statusStr = m.translator.T("llm.status_unavailable")
 		}
 
-		fmt.Printf("- %s: %s | %s: %d | %s: %d\n",
-			modelName, statusStr, m.translator.T("llm.remaining_calls"), remainingCalls, m.translator.T("llm.priority"), priority)
+		fmt.Printf("- %s: %s | %s: %d\n",
+			modelName, statusStr, m.translator.T("llm.remaining_calls"), remainingCalls)
 	}
 
 	fmt.Println()
