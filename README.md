@@ -3,7 +3,7 @@
   
   # AI Shell Assistant
   
-  > 面向服务器运维、云原生运维的智能命令行助手
+  面向服务器运维、云原生运维的智能命令行助手
   
   [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
   [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://go.dev/)
