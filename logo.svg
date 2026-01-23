@@ -1,0 +1,37 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="100" cy="100" r="95" fill="#0D1117" stroke="#30A46C" stroke-width="3"/>
+  
+  <!-- Terminal Window -->
+  <rect x="40" y="60" width="120" height="90" rx="8" fill="#161B22" stroke="#30A46C" stroke-width="2.5"/>
+  
+  <!-- Terminal Header Dots -->
+  <circle cx="52" cy="72" r="3" fill="#FF5F56"/>
+  <circle cx="64" cy="72" r="3" fill="#FFBD2E"/>
+  <circle cx="76" cy="72" r="3" fill="#27C93F"/>
+  
+  <!-- Command Prompt Symbol -->
+  <path d="M 52 95 L 62 105 L 52 115" stroke="#30A46C" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- AI Spark/Lightning -->
+  <path d="M 75 92 L 85 105 L 78 105 L 82 118 L 68 102 L 75 102 Z" fill="#58A6FF" opacity="0.9"/>
+  
+  <!-- Cursor Blink -->
+  <rect x="88" y="102" width="2.5" height="14" fill="#30A46C"/>
+  
+  <!-- Code Lines -->
+  <line x1="52" y1="128" x2="95" y2="128" stroke="#8B949E" stroke-width="2" stroke-linecap="round"/>
+  <line x1="52" y1="138" x2="110" y2="138" stroke="#8B949E" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- AI Brain Circuit Pattern (decorative) -->
+  <g opacity="0.15">
+    <circle cx="135" cy="50" r="8" fill="#58A6FF"/>
+    <circle cx="155" cy="45" r="6" fill="#58A6FF"/>
+    <circle cx="145" cy="35" r="5" fill="#58A6FF"/>
+    <line x1="135" y1="50" x2="155" y2="45" stroke="#58A6FF" stroke-width="1.5"/>
+    <line x1="135" y1="50" x2="145" y2="35" stroke="#58A6FF" stroke-width="1.5"/>
+  </g>
+  
+  <!-- Bottom Accent -->
+  <path d="M 60 155 Q 100 165 140 155" stroke="#30A46C" stroke-width="2" fill="none" opacity="0.6"/>
+</svg>

@@ -1,6 +1,15 @@
-# AI Shell Assistant
-
-> 面向服务器运维、云原生运维的智能命令行助手
+<div align="center">
+  <img src="logo.svg" alt="AI Shell Assistant Logo" width="200"/>
+  
+  # AI Shell Assistant
+  
+  > 面向服务器运维、云原生运维的智能命令行助手
+  
+  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+  [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://go.dev/)
+  [![Release](https://img.shields.io/github/v/release/llaoj/aiassist)](https://github.com/llaoj/aiassist/releases)
+  
+</div>
 
 **aiassist** 是一个基于大语言模型的智能终端工具，通过自然语言交互为运维人员提供诊断分析、方案建议和命令执行指导，显著提升运维效率。
 
