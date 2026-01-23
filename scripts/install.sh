@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # aiassist installation script
-# Usage: curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/scripts/install.sh | bash
 
 set -e
 

@@ -11,8 +11,8 @@ echo "========================================"
 echo ""
 
 # Check if install.sh exists
-if [ ! -f "install.sh" ]; then
-    echo "Error: install.sh not found in current directory"
+if [ ! -f "scripts/install.sh" ]; then
+    echo "Error: scripts/install.sh not found"
     exit 1
 fi
 
@@ -80,12 +80,12 @@ echo "   $VERSION_OUTPUT"
 echo ""
 
 # Check install script syntax
-echo "4. Checking install.sh syntax..."
-bash -n install.sh
+echo "4. Checking scripts/install.sh syntax..."
+bash -n scripts/install.sh
 if [ $? -eq 0 ]; then
     echo "   ✓ Syntax check passed"
 else
-    echo "   Error: Syntax errors found in install.sh"
+    echo "   Error: Syntax errors found in scripts/install.sh"
     exit 1
 fi
 echo ""
@@ -135,5 +135,5 @@ echo "Next steps to test full installation:"
 echo "  1. Create a release on GitHub"
 echo "  2. Upload binaries for different platforms"
 echo "  3. Test installation script:"
-echo "     bash install.sh"
+echo "     bash scripts/install.sh"
 echo ""

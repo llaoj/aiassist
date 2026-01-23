@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/install.sh | ba
 
 ```bash
 # Build binaries for all supported platforms
-./build-all.sh
+./scripts/build-all.sh
 
 # Output will be in dist/ directory
 ```
@@ -47,9 +47,9 @@ If you need to create a release manually:
 
 ```bash
 # 1. Build all platforms
-./build-all.sh
+./scripts/build-all.sh
 
-# 2. Create archives (already done by build-all.sh)
+# 2. Create archives (already done by scripts/build-all.sh)
 cd dist/
 
 # 3. Generate checksums
@@ -84,7 +84,7 @@ sha256sum aiassist-* > checksums.txt
 
 ```bash
 # Run local installation test
-./test-install.sh
+./scripts/test-install.sh
 ```
 
 ### Test Build
@@ -102,7 +102,7 @@ make build
 
 ```bash
 # Build all platforms
-./build-all.sh
+./scripts/build-all.sh
 
 # Check output
 ls -lh dist/
@@ -149,16 +149,17 @@ git describe --tags --always
 
 ```
 .
-├── install.sh           # Installation script (for end users)
 ├── build.sh             # Single platform build
-├── build-all.sh         # Multi-platform build
-├── test-install.sh      # Installation test script
 ├── Makefile             # Build automation
 ├── INSTALL.md           # Installation documentation
+├── scripts/             # Scripts directory
+│   ├── install.sh      # Installation script (for end users)
+│   ├── build-all.sh    # Multi-platform build
+│   └── test-install.sh # Installation test script
 ├── .github/
 │   └── workflows/
 │       └── release.yml  # GitHub Actions release workflow
-└── dist/                # Build output (created by build-all.sh)
+└── dist/                # Build output (created by scripts/build-all.sh)
     ├── aiassist-*       # Binaries
     ├── *.tar.gz         # Linux/macOS archives
     ├── *.zip            # Windows archives
@@ -172,10 +173,10 @@ git describe --tags --always
 make build
 
 # Build for all platforms
-./build-all.sh
+./scripts/build-all.sh
 
 # Test installation script
-./test-install.sh
+./scripts/test-install.sh
 
 # Create a release
 git tag -a v1.0.0 -m "Release v1.0.0"

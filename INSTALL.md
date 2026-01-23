@@ -8,12 +8,12 @@ The installation script automatically detects your OS and architecture:
 
 **Using curl:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/scripts/install.sh | bash
 ```
 
 **Using wget:**
 ```bash
-wget -qO- https://raw.githubusercontent.com/llaoj/aiassist/main/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/llaoj/aiassist/main/scripts/install.sh | bash
 ```
 
 ## Supported Platforms
@@ -81,7 +81,7 @@ make build
 
 ```bash
 # Build for all supported platforms
-./build-all.sh
+./scripts/build-all.sh
 
 # Binaries will be created in the dist/ directory
 ```
@@ -106,7 +106,7 @@ aiassist config
 To update to the latest version, simply re-run the installation script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/scripts/install.sh | bash
 ```
 
 ## Uninstall
@@ -143,7 +143,7 @@ If you get permission errors during installation:
 
 ```bash
 # Option 1: Use sudo
-curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/scripts/install.sh | sudo bash
 
 # Option 2: Install to user directory
 mkdir -p ~/.local/bin

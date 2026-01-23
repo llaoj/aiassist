@@ -1,153 +1,449 @@
-# AI Shell Assistant 工具使用手册
+# AI Shell Assistant
 
-## 快速安装
+> 面向服务器运维、云原生运维的智能命令行助手
 
-### 一键安装（推荐）
+**aiassist** 是一个基于大语言模型的智能终端工具，通过自然语言交互为运维人员提供诊断分析、方案建议和命令执行指导，显著提升运维效率。
 
-使用官方安装脚本，自动检测系统类型并安装：
+## ✨ 核心特性
+
+- 🤖 **AI 驱动**：集成主流大语言模型（通义千问、OpenAI等），支持自然语言交互
+- 🔄 **智能 Fallback**：多模型自动切换，配置文件顺序决定调用优先级
+- 🎯 **上下文感知**：自动关联命令执行结果，支持连续对话
+- 📊 **管道分析**：直接分析命令输出流，如 `tail -f access.log | aiassist`
+- 🛡️ **安全控制**：查询命令（绿色）和修改命令（红色）差异化展示，修改命令需二次确认
+- 🌍 **多语言支持**：中文/英文界面
+- ⚙️ **灵活配置**：支持多 Provider、多模型、自定义 API Key 和代理
+
+## 🚀 快速开始
+
+### 一键安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/scripts/install.sh | bash
 ```
 
-或使用 `wget`：
+### 支持平台
+
+| 平台 | 架构 |
+|------|------|
+| Linux | x86_64, ARM64, ARM, i386 |
+| macOS | Intel (x86_64), Apple Silicon (ARM64) |
+| Windows | x86_64, ARM64, i386 |
+| FreeBSD | x86_64, ARM64 |
+
+详细安装说明请查看 [INSTALL.md](INSTALL.md)
+
+## 📖 使用指南
+
+### 首次配置
+
+首次使用需要配置 LLM Provider：
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/llaoj/aiassist/main/install.sh | bash
+aiassist config
 ```
 
-### 支持的平台
+交互式向导将引导你完成：
+1. 选择语言（中文/English）
+2. 添加 LLM Provider（支持 OpenAI 兼容接口）
+3. 配置 API Key
+4. 设置模型列表
+5. （可选）配置 HTTP 代理
 
-- **Linux**: x86_64, ARM64, ARM, i386
-- **macOS**: Intel (x86_64), Apple Silicon (ARM64)  
-- **Windows**: x86_64, ARM64, i386
-- **FreeBSD**: x86_64, ARM64
+### 交互式模式
 
-### 手动安装
+直接运行进入对话模式：
 
-1. 从 [Releases](https://github.com/llaoj/aiassist/releases) 页面下载对应平台的二进制文件
-2. 解压并移动到 PATH 路径：
-   ```bash
-   # Linux/macOS
-   sudo mv aiassist /usr/local/bin/
-   sudo chmod +x /usr/local/bin/aiassist
-   
-   # Windows (PowerShell，以管理员身份运行)
-   Move-Item aiassist.exe C:\Windows\System32\
-   ```
+```bash
+aiassist
+```
+
+示例对话：
+```
+You> 服务器负载很高，帮我排查原因
+
+AI> 让我们先检查一下系统负载情况：
+
+[查询命令]
+top -b -n 1 | head -20
+
+是否执行? (yes/no): yes
+
+[执行结果]
+...
+
+AI> 从输出看，CPU 使用率主要是进程 nginx (PID 1234) 占用...
+建议执行：
+
+[查询命令]
+ps aux | grep nginx
+```
+
+**特点：**
+- ✅ 自然语言提问
+- ✅ AI 自动分析并给出命令建议
+- ✅ 命令标注类型（查询/修改）
+- ✅ 手动确认后执行
+- ✅ 自动读取上一条命令输出，进行连续分析
+
+### 管道分析模式
+
+直接分析命令输出：
+
+```bash
+# 分析日志文件
+tail -f /var/log/nginx/access.log | aiassist
+
+# 分析系统状态
+docker ps -a | aiassist "分析容器状态"
+
+# 分析错误日志
+journalctl -u nginx -n 100 | aiassist "找出错误原因"
+```
+
+**工作流程：**
+1. 管道前的命令输出作为输入
+2. AI 自动分析数据，识别异常
+3. 给出诊断结论和解决方案
+4. 提供可执行的修复命令
+
+### 常用命令
+
+```bash
+# 查看版本
+aiassist version
+
+# 配置向导
+aiassist config
+
+# 添加 Provider
+aiassist config provider add
+
+# 列出所有 Provider
+aiassist config provider list
+
+# 启用/禁用 Provider
+aiassist config provider enable <name>
+aiassist config provider disable <name>
+
+# 删除 Provider
+aiassist config provider delete <name>
+
+# 查看帮助
+aiassist --help
+```
+
+## 🔧 配置说明
+
+### 配置文件
+
+配置文件位于 `~/.aiassist/config.yaml`：
+
+```yaml
+language: zh  # zh=中文, en=English
+http_proxy: ""  # HTTP 代理地址（可选）
+
+providers:
+  bailian:  # Provider 名称
+    name: bailian
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key: sk-xxx
+    enabled: true
+    models:
+      - name: qwen-plus
+        enabled: true
+      - name: qwen-turbo
+        enabled: true
+  
+  openai:
+    name: openai
+    base_url: https://api.openai.com/v1
+    api_key: sk-xxx
+    enabled: true
+    models:
+      - name: gpt-4
+        enabled: true
+      - name: gpt-3.5-turbo
+        enabled: false
+```
+
+### 模型调用顺序
+
+**重要：模型调用顺序由配置文件中的排列顺序决定。**
+
+例如上面的配置，调用顺序为：
+1. `bailian/qwen-plus` (第一个启用的)
+2. `bailian/qwen-turbo` (第二个启用的)
+3. `openai/gpt-4` (第三个启用的)
+
+如果当前模型调用失败、超时或不可用，会自动切换到下一个启用的模型。
+
+### Provider 配置
+
+#### 通义千问（阿里云百炼）
+
+```bash
+# 申请地址
+https://dashscope.console.aliyun.com/apiKey
+
+# 配置示例
+Provider Name: bailian
+Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
+API Key: sk-xxxxxxxxxxxx
+Models: qwen-plus,qwen-turbo,qwen-max
+```
+
+#### OpenAI
+
+```bash
+# 申请地址
+https://platform.openai.com/api-keys
+
+# 配置示例
+Provider Name: openai
+Base URL: https://api.openai.com/v1
+API Key: sk-xxxxxxxxxxxx
+Models: gpt-4,gpt-3.5-turbo
+HTTP Proxy: http://127.0.0.1:7890  # 国内需要代理
+```
+
+#### 其他 OpenAI 兼容 API
+
+任何实现 OpenAI API 标准的服务都可以配置：
+
+```bash
+Provider Name: custom
+Base URL: https://your-api-endpoint/v1
+API Key: your-api-key
+Models: model-name-1,model-name-2
+```
+
+## 🛡️ 安全设计
+
+### 命令分类
+
+aiassist 将命令分为两类：
+
+| 类型 | 标记 | 颜色 | 确认次数 | 示例 |
+|------|------|------|---------|------|
+| 查询命令 | `[cmd:query]` | 🟢 绿色 | 1次 | `ps aux`, `cat /etc/config`, `docker ps` |
+| 修改命令 | `[cmd:modify]` | 🔴 红色 | 2次 | `systemctl restart`, `rm -rf`, `iptables -A` |
+
+### 执行流程
+
+1. **AI 分析**：理解问题，给出方案
+2. **命令展示**：显示建议的命令及类型标记
+3. **用户确认**：
+   - 查询命令：确认1次即可执行
+   - 修改命令：需要确认2次，防止误操作
+4. **执行反馈**：显示执行结果，AI 继续分析
+
+### 命令标记规范
+
+AI 模型在生成命令时，会自动添加类型标记：
+
+```
+[cmd:query] ps aux | grep nginx    # 查询命令
+[cmd:modify] systemctl restart nginx  # 修改命令
+```
+
+这些标记由 AI 模型根据系统提示词自动生成，工具会解析这些标记来确定命令类型。
+
+## 🎯 使用场景
+
+### 故障排查
+
+```bash
+You> Nginx 无法启动，报错 bind failed
+
+AI> 端口可能被占用，让我们检查：
+[cmd:query] netstat -tlnp | grep :80
+
+# 发现端口被占用后...
+AI> 发现进程 1234 占用了 80 端口，建议：
+[cmd:modify] kill -9 1234
+[cmd:modify] systemctl start nginx
+```
+
+### 性能分析
+
+```bash
+You> 服务器 CPU 负载过高
+
+AI> 先检查进程资源占用：
+[cmd:query] top -b -n 1 | head -20
+[cmd:query] ps aux --sort=-%cpu | head -10
+
+# 分析后...
+AI> 发现 mysql 进程占用 CPU 较高，建议检查慢查询...
+```
+
+### 日志分析
+
+```bash
+tail -f /var/log/nginx/access.log | aiassist
+
+AI> 检测到异常：
+- IP 192.168.1.100 在1分钟内请求 500+ 次
+- 大量 404 错误
+- 疑似扫描攻击
+
+建议：
+[cmd:modify] iptables -A INPUT -s 192.168.1.100 -j DROP
+```
+
+### 配置检查
+
+```bash
+You> 检查 Nginx 配置是否正确
+
+AI> 让我们检查配置文件：
+[cmd:query] nginx -t
+[cmd:query] cat /etc/nginx/nginx.conf
+
+# 发现错误后...
+AI> 配置文件第 45 行缺少分号，建议修改...
+```
+
+## 🔄 工作原理
+
+```
+┌──────────────┐
+│  用户输入    │
+│  或管道数据  │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────────┐
+│  系统信息收集    │
+│  (OS/版本/工具)  │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│  构建 Prompt     │
+│  (问题+系统信息) │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│  LLM 分析        │
+│  (按配置顺序)    │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│  提取命令        │
+│  [cmd:query]     │
+│  [cmd:modify]    │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│  用户确认        │
+│  (分类展示)      │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│  执行命令        │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│  结果反馈        │
+│  (继续分析)      │
+└──────────────────┘
+```
+
+## 📝 开发
 
 ### 从源码构建
 
-要求 Go 1.21 或更高版本：
-
 ```bash
+# 克隆仓库
 git clone https://github.com/llaoj/aiassist.git
 cd aiassist
+
+# 安装依赖
+go mod download
+
+# 构建（当前平台）
 make build
-# 或使用
+# 或
 ./build.sh
+
+# 构建所有平台
+./scripts/build-all.sh
+
+# 运行测试
+go test ./...
+
+# 运行
+./aiassist
 ```
 
-## 一、工具概述
-**AI Shell Assistant**（简写命令：`aiassist`）是一款面向**服务器运维、云原生运维**领域的智能命令行工具。它以专家视角为运维人员提供问题诊断、方案建议与命令执行指导，帮助用户优化运维思路、缩短故障排查周期，显著提升运维工作效率。
+### 项目结构
 
-工具支持在 `bash`、`sh`、`zsh` 等主流终端环境中运行，开箱即用。
+```
+aiassist/
+├── cmd/aiassist/          # 主程序入口
+├── internal/
+│   ├── cmd/               # CLI 命令实现
+│   │   ├── root.go       # 根命令
+│   │   ├── config.go     # 配置命令
+│   │   ├── interactive.go # 交互模式
+│   │   └── version.go    # 版本命令
+│   ├── config/            # 配置管理
+│   ├── executor/          # 命令执行器
+│   ├── i18n/              # 国际化
+│   ├── interactive/       # 交互会话
+│   ├── llm/               # LLM 管理器
+│   │   ├── manager.go    # Provider 管理
+│   │   └── openai_compatible.go # OpenAI 兼容接口
+│   ├── prompt/            # 系统提示词
+│   ├── sysinfo/           # 系统信息收集
+│   └── ui/                # UI 工具
+├── .github/workflows/     # CI/CD
+└── scripts/               # 脚本目录
+    ├── install.sh        # 一键安装脚本
+    ├── build-all.sh      # 多平台构建
+    └── test-install.sh   # 安装测试
+```
 
-## 二、核心命令说明
-### 1. 基本交互命令
-- **直接进入AI模式**
-  ```bash
-  aiassist
-  ```
-  进入交互式会话后，用户可输入任意运维相关问题（如`为什么服务器负载很高？`）。工具会基于内置大模型输出专业分析结论，并提供可直接执行的命令建议，用户通过 `yes/no` 选择是否执行。
-  该模式支持**连续对话与上下文联动**：工具会自动读取上一条执行命令的输出结果，作为当前会话的输入参数，实现问题的递进式排查与解决。
+### 技术栈
 
-- **管道联动分析**
-  ```bash
-  tail -f /var/log/nginx/access.log | aiassist
-  ```
-  支持对接各类命令的输出数据流（如日志文件、系统状态查询结果等），将管道前序命令的输出作为输入，由AI模型完成智能解析、异常识别与方案建议。
-  例如分析Nginx访问日志时，若检测到某IP单位时间内访问频次异常偏高，工具会先输出攻击风险分析，再推荐`fail2ban`相关封禁命令；若执行命令后提示`fail2ban`未安装，模型会自动读取该错误输出，进一步给出`yum install fail2ban -y`或`apt install fail2ban -y`的安装建议。
+- **语言**: Go 1.21+
+- **CLI 框架**: cobra
+- **配置**: YAML
+- **HTTP 客户端**: 标准库 net/http
+- **测试**: Go testing
 
-### 2. 配置与信息查询命令
-- **初始化配置**
-  ```bash
-  aiassist config
-  ```
-  参考 `s3cmd config` 的交互逻辑，引导用户完成全维度配置，包括：
-  - 大模型选择与优先级设置：支持配置偏好模型，设定多模型切换策略。
-  - 认证信息配置：录入模型调用所需的 API Key，工具自动校验 Key 有效性。
-  - 语言偏好设定：配置模型回复的默认语言，贴合用户使用习惯。
-  - 代理配置：为海外模型配置 HTTP 代理地址，解决网络访问问题。
-  - 调用限制配置：设置模型每日调用次数上限、并发请求数等参数。
+## 🤝 贡献
 
-  **配置时的 API Key 申请引导**：
-  执行配置命令后，工具会列出支持的所有模型，并展示对应的 API Key 官方申请地址与操作指引，示例如下：
-  ```bash
-  请选择要启用的模型（可多选）：
-  1. 通义千问轻量版（国内无墙，每日1000次免费）
-     - 申请地址：https://dashscope.console.aliyun.com/apiKey
-     - 操作指引：注册阿里云账号 → 开通通义千问服务 → 生成 API Key
-     - 请输入你的 API Key：
-  2. ChatGPT（GPT-3.5/4，海外模型需代理）
-     - 申请地址：https://platform.openai.com/api-keys
-     - 操作指引：注册 OpenAI 账号 → 绑定支付方式 → 创建 API Key
-     - 请输入你的 API Key：
-  3. DeepSeek 代码模型（代码生成优化，免费额度充足）
-     - 申请地址：https://platform.deepseek.com/api_keys
-     - 操作指引：注册 DeepSeek 账号 → 进入 API 管理页 → 生成 API Key
-     - 请输入你的 API Key：
-  ```
+欢迎贡献代码、报告问题或提出建议！
 
-- **版本信息查看**
-  ```bash
-  aiassist version
-  ```
-  输出工具全称、版本号、代码提交号，用于环境校验、问题排查与版本升级确认。
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 提交 Pull Request
 
-## 三、核心功能特性
-1. **多模型动态切换能力**
-    工具内置多类大模型集成接口，支持配置**通义千问、DeepSeek、ChatGPT**等主流模型。用户可按需配置多个模型的 API Key，并设定**偏好模型优先级**；同时支持配置动态切换策略，当当前模型调用失败、达到次数上限或响应超时，工具会自动切换至下一个可用模型，保障服务连续性。
+## 📄 许可证
 
-2. **智能上下文联动交互**
-    - 直接AI模式下，工具会自动关联历史会话与命令执行结果，用户无需重复输入上下文信息，即可实现递进式问题排查。
-    - 管道联动模式下，工具深度解析前序命令输出数据，精准定位异常点（如日志中的高频访问IP、系统命令返回的错误码），并输出针对性的分析报告与解决方案，形成“数据输入→智能分析→方案输出→命令执行”的闭环。
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
 
-3. **命令执行引导与风险管控**
-    无论是直接对话还是管道分析模式，工具给出的解决方案均包含**可执行命令建议**，而非单纯的理论指导。用户通过 `yes/no` 即可选择是否执行，无需手动复制粘贴或修改命令，大幅降低操作门槛。
+## 🙏 致谢
 
-## 四、易用性设计
-为降低用户误操作风险，工具针对不同类型的命令建议设计了**差异化的展示与确认机制**，核心规则如下：
-1. **查询类命令（无服务器变更风险）**
-    当建议的命令仅用于信息查询（如`ps -ef | grep nginx`、`cat /etc/nginx/nginx.conf`），不对服务器配置、数据、运行状态产生任何变更时，命令会以**绿色字体**展示，用户可直接选择执行，无需二次确认。
+- [OpenAI](https://openai.com/) - API 标准参考
+- [阿里云百炼](https://www.aliyun.com/product/bailian) - 通义千问支持
+- [Cobra](https://github.com/spf13/cobra) - CLI 框架
 
-2. **变更类命令（需风险确认）**
-    当建议的命令涉及服务器状态变更（如软件安装`yum install fail2ban -y`、配置文件修改`sed -i 's/old/new/g' /etc/nginx/nginx.conf`、服务重启`systemctl restart nginx`）时，命令会以**红色字体**高亮展示，并触发**二次确认机制**——用户首次选择`yes`后，工具会再次弹窗提示“该命令将修改服务器配置，是否确定执行？”，需再次确认方可运行，最大限度规避误操作风险。
+## 📞 联系方式
 
-## 五、大模型调用与切换管理
-### 1. 模型支持列表
-工具支持集成多类主流大模型，覆盖国内/海外、免费/付费场景，用户可按需选择配置：
-| 模型类型 | 支持模型 | 访问特性 | 授权方式 |
-|----------|----------|----------|----------|
-| 国内模型 | 通义千问、DeepSeek | 无网络限制，中文运维场景适配优 | API Key 认证 |
-| 海外模型 | ChatGPT（GPT-3.5/4） | 需配置 HTTP 代理 | API Key 认证 |
+- 问题反馈: [GitHub Issues](https://github.com/llaoj/aiassist/issues)
+- 功能建议: [GitHub Discussions](https://github.com/llaoj/aiassist/discussions)
 
-### 2. 授权配置流程
-工具采用**用户自主申请+本地校验**的授权模式，全程无需经过第三方服务器，保障 API Key 安全：
-1. **申请引导**：执行 `aiassist config` 命令后，工具会展示各模型的 API Key 官方申请地址与操作步骤，用户手动访问地址完成 Key 生成。
-2. **配置录入**：按工具提示填入生成的 API Key，工具自动发起轻量测试请求，校验 Key 的有效性与剩余额度。
-3. **本地存储**：配置信息加密存储在用户本地文件 `~/.aiassist/config.yaml` 中，工具仅在本地读取使用，不做任何上传。
+---
 
-### 3. 额度管理与自动切换
-- **额度监控**：工具内置额度管理模块，实时记录各模型的每日调用次数，对比用户配置的免费额度上限，在终端提示符前显示 `[当前模型][剩余次数/总次数]`，让用户实时知晓额度状态。
-- **自动切换策略**：
-  1.  优先调用用户设定的**偏好模型**，保障使用体验。
-  2.  当偏好模型额度用尽、调用失败或响应超时，自动切换到下一个**额度充足+网络可达**的模型。
-  3.  切换时终端给出明确提示，告知用户当前模型变更原因。
-- **额度重置**：每日到达设定的重置时间后，自动清零各模型的已用调用次数，恢复免费额度。
-
-### 4. 代理配置（海外模型专用）
-针对海外模型，工具支持配置 HTTP 代理解决访问问题：
-- 在 `aiassist config` 流程中，按提示填入代理地址（如 `http://127.0.0.1:7890`）。
-- 工具调用海外模型时，自动通过代理发起请求，国内模型则直接访问。
-- 支持操作系统环境变量配置http proxy
+**⭐ 如果这个项目对你有帮助，欢迎点个 Star！**
