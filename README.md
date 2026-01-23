@@ -1,13 +1,19 @@
 <div align="center">
-  <img src="logo.svg" alt="AI Shell Assistant Logo" width="200"/>
+  <img src="logo.svg" alt="AI Shell Assistant Logo" width="100"/>
   
   # AI Shell Assistant
   
   > 面向服务器运维、云原生运维的智能命令行助手
   
-  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+  [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
   [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://go.dev/)
   [![Release](https://img.shields.io/github/v/release/llaoj/aiassist)](https://github.com/llaoj/aiassist/releases)
+  
+  ---
+  
+  **🤖 本项目由 AI 全程编写完成 | This project is entirely AI-generated**
+  
+  ---
   
 </div>
 
@@ -440,7 +446,7 @@ aiassist/
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
+本项目采用 Apache License 2.0 许可证 - 详见 [LICENSE](LICENSE) 文件
 
 ## 🙏 致谢
 
