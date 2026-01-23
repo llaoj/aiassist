@@ -1,8 +1,57 @@
 # AI Shell Assistant 工具使用手册
+
+## 快速安装
+
+### 一键安装（推荐）
+
+使用官方安装脚本，自动检测系统类型并安装：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/install.sh | bash
+```
+
+或使用 `wget`：
+
+```bash
+wget -qO- https://raw.githubusercontent.com/llaoj/aiassist/main/install.sh | bash
+```
+
+### 支持的平台
+
+- **Linux**: x86_64, ARM64, ARM, i386
+- **macOS**: Intel (x86_64), Apple Silicon (ARM64)  
+- **Windows**: x86_64, ARM64, i386
+- **FreeBSD**: x86_64, ARM64
+
+### 手动安装
+
+1. 从 [Releases](https://github.com/llaoj/aiassist/releases) 页面下载对应平台的二进制文件
+2. 解压并移动到 PATH 路径：
+   ```bash
+   # Linux/macOS
+   sudo mv aiassist /usr/local/bin/
+   sudo chmod +x /usr/local/bin/aiassist
+   
+   # Windows (PowerShell，以管理员身份运行)
+   Move-Item aiassist.exe C:\Windows\System32\
+   ```
+
+### 从源码构建
+
+要求 Go 1.21 或更高版本：
+
+```bash
+git clone https://github.com/llaoj/aiassist.git
+cd aiassist
+make build
+# 或使用
+./build.sh
+```
+
 ## 一、工具概述
 **AI Shell Assistant**（简写命令：`aiassist`）是一款面向**服务器运维、云原生运维**领域的智能命令行工具。它以专家视角为运维人员提供问题诊断、方案建议与命令执行指导，帮助用户优化运维思路、缩短故障排查周期，显著提升运维工作效率。
 
-工具支持在 `bash`、`sh`、`zsh` 等主流终端环境中运行，用户可通过 `yum`、`apt`、`apk` 等包管理工具完成快速安装，开箱即用。
+工具支持在 `bash`、`sh`、`zsh` 等主流终端环境中运行，开箱即用。
 
 ## 二、核心命令说明
 ### 1. 基本交互命令
