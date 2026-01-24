@@ -43,6 +43,12 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 		var input string
 		color.Yellow("\n" + translator.T("executor.execute_prompt"))
 		fmt.Scanln(&input)
+		input = strings.ToLower(strings.TrimSpace(input))
+
+		if input == "exit" {
+			color.Yellow("Exiting...\n")
+			os.Exit(0)
+		}
 
 		if input != "yes" && input != "y" {
 			color.Yellow("Cancelled\n")
@@ -61,15 +67,27 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 		var input string
 		color.Yellow("\n" + translator.T("executor.execute_prompt"))
 		fmt.Scanln(&input)
+		input = strings.ToLower(strings.TrimSpace(input))
+
+		if input == "exit" {
+			color.Yellow("Exiting...\n")
+			os.Exit(0)
+		}
 
 		if input != "yes" && input != "y" {
 			color.Yellow("Cancelled\n")
 			return false
 		}
 
-		// Second confirmation for critical operations
+		// Second confirmation for critical operations (only after yes)
 		color.Red("\n" + translator.T("executor.modify_warning"))
 		fmt.Scanln(&input)
+		input = strings.ToLower(strings.TrimSpace(input))
+
+		if input == "exit" {
+			color.Yellow("Exiting...\n")
+			os.Exit(0)
+		}
 
 		if input != "yes" && input != "y" {
 			color.Yellow("Cancelled\n")

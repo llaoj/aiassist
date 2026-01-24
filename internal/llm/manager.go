@@ -198,15 +198,13 @@ func (m *Manager) PrintStatus() {
 
 	for modelName, info := range status {
 		available := info["available"].(bool)
-		remainingCalls := info["remaining_calls"].(int)
 
 		statusStr := m.translator.T("llm.status_available")
 		if !available {
 			statusStr = m.translator.T("llm.status_unavailable")
 		}
 
-		fmt.Printf("- %s: %s | %s: %d\n",
-			modelName, statusStr, m.translator.T("llm.remaining_calls"), remainingCalls)
+		fmt.Printf("- %s: %s\n", modelName, statusStr)
 	}
 
 	fmt.Println()

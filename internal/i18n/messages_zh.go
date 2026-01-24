@@ -21,6 +21,9 @@ var ChineseMessages = map[string]string{
 	"config.openai_compat.success":       "✓ 提供商 '%s' 配置成功",
 	"config.openai_compat.add_more":      "继续添加其他模型吗? (yes/no): ",
 	"config.openai_compat.no_models":     "✗ 未配置任何模型",
+	"config.openai_compat.added":         "✓ 提供商 '%s' 添加成功",
+	"config.openai_compat.models_list":   "模型: %v",
+	"config.openai_compat.order_hint":    "提示: 模型的调用顺序按照配置文件中的顺序。当一个模型不可用时，将自动尝试下一个模型。",
 
 	// Default model selection
 	"config.default_model.title":    "选择默认模型",
@@ -64,11 +67,11 @@ var ChineseMessages = map[string]string{
 	"interactive.thinking":          "思考中",
 
 	// Executor messages
-	"executor.query_command":        "📋 查询命令:",
+	"executor.query_command":        "查询命令:",
 	"executor.modify_command":       "!!! 修改命令 (需要确认):",
 	"executor.unclassified_command": "? 未分类命令:",
-	"executor.execute_prompt":       "是否执行此命令? (yes/no): ",
-	"executor.modify_warning":       "!!! 警告: 该命令将修改服务器配置，是否确定执行? (yes/no): ",
+	"executor.execute_prompt":       "是否执行此命令? (y/n, exit退出): ",
+	"executor.modify_warning":       "!!! 警告: 该命令将修改服务器配置，是否确定执行? (y/n, exit退出): ",
 	"executor.execute_success":      "✓ 执行成功",
 	"executor.execute_failed":       "✗ 执行失败: %v",
 	"executor.confirm_execution":    "发现待执行命令:",

@@ -9,6 +9,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/llaoj/aiassist/internal/config"
 	"github.com/llaoj/aiassist/internal/i18n"
+	"github.com/llaoj/aiassist/internal/llm"
 	"github.com/llaoj/aiassist/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -121,13 +122,14 @@ func addProviderInteractive() {
 			fmt.Println(translator.T("config.openai_compat.name_empty"))
 			continue
 		}
-		providerName = name
-	}
 
-	// Check if provider already exists
-	if cfg.GetProvider(providerName) != nil {
-		color.Red(fmt.Sprintf("Provider '%s' already exists\n", providerName))
-		return
+		// Check if provider already exists
+		if cfg.GetProvider(name) != nil {
+			color.Red(fmt.Sprintf("Provider '%s' already exists\n", name))
+			continue
+		}
+
+		providerName = name
 	}
 
 	// Get base URL
@@ -169,12 +171,14 @@ func addProviderInteractive() {
 		modelNames = models
 	}
 
-	// Parse comma-separated model names
+	// Parse comma-separated model names and deduplicate
 	modelList := make([]string, 0)
+	seenModels := make(map[string]bool)
 	for _, m := range strings.Split(modelNames, ",") {
 		m = strings.TrimSpace(m)
-		if m != "" {
+		if m != "" && !seenModels[m] {
 			modelList = append(modelList, m)
+			seenModels[m] = true
 		}
 	}
 
@@ -201,10 +205,9 @@ func addProviderInteractive() {
 		return
 	}
 
-	color.Green(fmt.Sprintf("✓ Provider '%s' added successfully\n", providerName))
-	fmt.Printf("Models: %v\n", modelList)
-	color.Yellow("\n提示: 模型的调用顺序按照配置文件中的顺序。当一个模型不可用时，将自动尝试下一个模型。\n")
-	color.Yellow("Tip: Model invocation follows the order in the config file. When a model is unavailable, the next one will be tried automatically.\n\n")
+	color.Green(translator.T("config.openai_compat.added", providerName) + "\n")
+	fmt.Printf(translator.T("config.openai_compat.models_list", modelList) + "\n")
+	color.Yellow("\n" + translator.T("config.openai_compat.order_hint") + "\n\n")
 }
 
 func deleteProviderInteractive() {
@@ -275,11 +278,46 @@ func deleteProviderByName(providerName string) {
 func listProviders() {
 	cfg := config.Get()
 
-	allProviders := cfg.GetEnabledProviders()
+	allProviders := cfg.GetAllProviders()
 	if len(allProviders) == 0 {
 		color.Yellow("⚠ No providers configured\n")
 		return
 	}
+
+	// Create LLM manager to check model availability
+	manager := llm.NewManager(cfg)
+
+	// Register all providers/models to get their status
+	modelStatusMap := make(map[string]map[string]interface{})
+	seenModels := make(map[string]bool)
+
+	for _, provider := range allProviders {
+		for _, modelCfg := range provider.Models {
+			if !modelCfg.Enabled {
+				continue
+			}
+
+			modelKey := fmt.Sprintf("%s/%s", provider.Name, modelCfg.Name)
+
+			// Skip duplicate models
+			if seenModels[modelKey] {
+				continue
+			}
+			seenModels[modelKey] = true
+
+			// Create provider instance to check status
+			p := llm.NewOpenAICompatibleProvider(
+				modelKey,
+				provider.BaseURL,
+				provider.APIKey,
+				modelCfg.Name,
+			)
+			manager.RegisterProvider(modelKey, p)
+		}
+	}
+
+	// Get status for all registered models
+	modelStatusMap = manager.GetStatus()
 
 	fmt.Printf("\n%s\n", ui.Separator())
 	fmt.Println("Configured Providers:")
@@ -292,7 +330,33 @@ func listProviders() {
 		}
 		fmt.Printf("%d. %s [%s]\n", i+1, p.Name, status)
 		fmt.Printf("   Base URL: %s\n", p.BaseURL)
-		fmt.Printf("   Models: %v\n\n", getModelNames(p.Models))
+
+		// Display models with their status (deduplicated)
+		fmt.Printf("   Models:\n")
+		displayedModels := make(map[string]bool)
+
+		for _, modelCfg := range p.Models {
+			modelKey := fmt.Sprintf("%s/%s", p.Name, modelCfg.Name)
+
+			// Skip duplicates
+			if displayedModels[modelKey] {
+				continue
+			}
+			displayedModels[modelKey] = true
+
+			// Get model status
+			modelStatus := "✓ Enabled"
+			if !modelCfg.Enabled {
+				modelStatus = "✗ Disabled"
+			} else if statusInfo, exists := modelStatusMap[modelKey]; exists {
+				if available, ok := statusInfo["available"].(bool); ok && !available {
+					modelStatus = "✗ Unavailable"
+				}
+			}
+
+			fmt.Printf("     - %s [%s]\n", modelCfg.Name, modelStatus)
+		}
+		fmt.Println()
 	}
 }
 
@@ -419,12 +483,14 @@ func interactiveConfig() error {
 			modelNames = models
 		}
 
-		// Parse comma-separated model names
+		// Parse comma-separated model names and deduplicate
 		modelList := make([]string, 0)
+		seenModels := make(map[string]bool)
 		for _, m := range strings.Split(modelNames, ",") {
 			m = strings.TrimSpace(m)
-			if m != "" {
+			if m != "" && !seenModels[m] {
 				modelList = append(modelList, m)
+				seenModels[m] = true
 			}
 		}
 

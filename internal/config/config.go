@@ -164,6 +164,19 @@ func (c *Config) GetEnabledProviders() []*ProviderConfig {
 	return enabled
 }
 
+// GetAllProviders returns list of all providers
+func (c *Config) GetAllProviders() []*ProviderConfig {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	all := make([]*ProviderConfig, 0, len(c.Providers))
+	for _, provider := range c.Providers {
+		all = append(all, provider)
+	}
+
+	return all
+}
+
 // DeleteProvider removes a provider configuration
 func (c *Config) DeleteProvider(providerName string) error {
 	c.mu.Lock()

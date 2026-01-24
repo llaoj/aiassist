@@ -12,11 +12,11 @@ import (
 // OpenAICompatibleProvider is a universal provider for OpenAI-compatible APIs
 // This can work with any LLM service that implements the OpenAI API standard
 type OpenAICompatibleProvider struct {
-	name           string
-	baseURL        string
-	apiKey         string
-	modelName      string
-	remainingCalls int
+	name      string
+	baseURL   string
+	apiKey    string
+	modelName string
+	available bool
 }
 
 // Request and Response structures for OpenAI API
@@ -44,11 +44,11 @@ type choice struct {
 // NewOpenAICompatibleProvider creates a new OpenAI-compatible provider
 func NewOpenAICompatibleProvider(name, baseURL, apiKey, modelName string) *OpenAICompatibleProvider {
 	return &OpenAICompatibleProvider{
-		name:           name,
-		baseURL:        baseURL,
-		apiKey:         apiKey,
-		modelName:      modelName,
-		remainingCalls: 1000,
+		name:      name,
+		baseURL:   baseURL,
+		apiKey:    apiKey,
+		modelName: modelName,
+		available: true,
 	}
 }
 
@@ -57,11 +57,11 @@ func (o *OpenAICompatibleProvider) GetName() string {
 }
 
 func (o *OpenAICompatibleProvider) IsAvailable() bool {
-	return o.remainingCalls > 0
+	return o.available
 }
 
 func (o *OpenAICompatibleProvider) GetRemainingCalls() int {
-	return o.remainingCalls
+	return 0 // No longer tracking quota
 }
 
 func (o *OpenAICompatibleProvider) Call(ctx context.Context, prompt string) (string, error) {
@@ -70,8 +70,8 @@ func (o *OpenAICompatibleProvider) Call(ctx context.Context, prompt string) (str
 
 // CallWithSystemPrompt calls the LLM API with a system prompt
 func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, systemPrompt string, userPrompt string) (string, error) {
-	if o.remainingCalls <= 0 {
-		return "", fmt.Errorf("%s quota exhausted", o.name)
+	if !o.available {
+		return "", fmt.Errorf("%s is unavailable (quota exhausted or billing issue)", o.name)
 	}
 
 	// Prepare messages
@@ -118,6 +118,13 @@ func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, sys
 	}
 	defer resp.Body.Close()
 
+	// Check HTTP status code
+	if resp.StatusCode == 429 {
+		// Rate limit or quota exceeded - mark as unavailable
+		o.available = false
+		return "", fmt.Errorf("%s: quota exceeded or rate limited (HTTP 429)", o.name)
+	}
+
 	// Read response
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -138,6 +145,5 @@ func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, sys
 		return "", fmt.Errorf("no response from %s", o.name)
 	}
 
-	o.remainingCalls--
 	return respData.Choices[0].Message.Content, nil
 }

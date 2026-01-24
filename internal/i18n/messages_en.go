@@ -21,6 +21,9 @@ var EnglishMessages = map[string]string{
 	"config.openai_compat.success":       "✓ Provider '%s' configured successfully",
 	"config.openai_compat.add_more":      "Add another model? (yes/no): ",
 	"config.openai_compat.no_models":     "✗ No models configured",
+	"config.openai_compat.added":         "✓ Provider '%s' added successfully",
+	"config.openai_compat.models_list":   "Models: %v",
+	"config.openai_compat.order_hint":    "Tip: Model invocation follows the order in the config file. When a model is unavailable, the next one will be tried automatically.",
 
 	// Default model selection
 	"config.default_model.title":    "Select Default Model",
@@ -64,11 +67,11 @@ var EnglishMessages = map[string]string{
 	"interactive.thinking":          "Thinking",
 
 	// Executor messages
-	"executor.query_command":        "📋 Query command:",
+	"executor.query_command":        "Query command:",
 	"executor.modify_command":       "!!! Modify command (requires confirmation):",
 	"executor.unclassified_command": "? Unclassified command:",
-	"executor.execute_prompt":       "Execute this command? (yes/no): ",
-	"executor.modify_warning":       "!!! Warning: This command will modify server configuration, are you sure? (yes/no): ",
+	"executor.execute_prompt":       "Execute this command? (y/n, exit to quit): ",
+	"executor.modify_warning":       "!!! Warning: This command will modify server configuration, are you sure? (y/n, exit to quit): ",
 	"executor.execute_success":      "✓ Execution successful",
 	"executor.execute_failed":       "✗ Execution failed: %v",
 	"executor.confirm_execution":    "Found command to execute:",
