@@ -10,9 +10,9 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Get version info
-VERSION=$(git describe --tags --always 2>/dev/null || echo "dev")
-COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+# Get version info (allow CI to inject)
+VERSION=${VERSION:-$(git describe --tags --always 2>/dev/null || echo "dev")}
+COMMIT=${COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")}
 
 # Build variables
 BINARY_NAME="aiassist"
@@ -67,10 +67,30 @@ for platform in "${PLATFORMS[@]}"; do
     echo ""
 done
 
+echo -e "${BLUE}Creating release archives...${NC}"
+for platform in "${PLATFORMS[@]}"; do
+    IFS='/' read -r os arch <<< "$platform"
+
+    base_name="${BINARY_NAME}-${os}-${arch}"
+    if [ "$os" = "windows" ]; then
+        (cd "$OUTPUT_DIR" && zip "${base_name}.zip" "${base_name}.exe" >/dev/null)
+    else
+        (cd "$OUTPUT_DIR" && tar czf "${base_name}.tar.gz" "${base_name}")
+    fi
+done
+
+echo -e "${BLUE}Generating checksums...${NC}"
+(cd "$OUTPUT_DIR" && {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum aiassist-* > checksums.txt
+    else
+        shasum -a 256 aiassist-* > checksums.txt
+    fi
+})
+
 echo -e "${GREEN}All builds completed!${NC}"
 echo ""
 echo "Output directory: $OUTPUT_DIR"
 echo "Total files: $(ls -1 "$OUTPUT_DIR" | wc -l | tr -d ' ')"
 echo ""
-echo "To create release archives, run:"
-echo "  cd $OUTPUT_DIR && for file in *; do tar czf \${file}.tar.gz \$file; done"
+echo "Checksums: ${OUTPUT_DIR}/checksums.txt"

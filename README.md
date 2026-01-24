@@ -15,6 +15,8 @@
   
   ---
   
+  中文 | [English](README_EN.md)
+  
 </div>
 
 **aiassist** 是一个基于大语言模型的智能终端工具，通过自然语言交互为运维人员提供诊断分析、方案建议和命令执行指导，显著提升运维效率。
@@ -36,6 +38,14 @@
 ```bash
 curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/scripts/install.sh | bash
 ```
+
+中国大陆网络环境（GitHub Proxy）：
+
+```bash
+ghproxy=https://ghfast.top; curl -fsSL ${ghproxy}/https://raw.githubusercontent.com/llaoj/aiassist/main/scripts/install.sh | sed "s#https://#${ghproxy}/https://#g" | bash
+```
+
+> ⚠️ **注意**：GitHub Proxy 通常不稳定，可能随时失效或更换域名。如果安装失败，请将命令中的 `ghproxy=https://ghfast.top` 替换为其他可用的代理地址。
 
 ### 支持平台
 

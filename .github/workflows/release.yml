@@ -38,52 +38,12 @@ jobs:
         env:
           VERSION: ${{ steps.get_version.outputs.VERSION }}
         run: |
-          # Create output directory
-          mkdir -p dist
-          
-          # Get commit hash
+          rm -rf dist
+          chmod +x scripts/build-all.sh
           COMMIT=$(git rev-parse --short HEAD)
-          LDFLAGS="-X main.Version=${VERSION} -X main.Commit=${COMMIT} -s -w"
-          
-          # Build for multiple platforms
-          platforms=(
-            "linux/amd64"
-            "linux/arm64"
-            "linux/arm"
-            "linux/386"
-            "darwin/amd64"
-            "darwin/arm64"
-            "windows/amd64"
-            "windows/arm64"
-            "windows/386"
-            "freebsd/amd64"
-            "freebsd/arm64"
-          )
-          
-          for platform in "${platforms[@]}"; do
-            IFS='/' read -r os arch <<< "$platform"
-            
-            output_name="dist/aiassist-${os}-${arch}"
-            if [ "$os" = "windows" ]; then
-              output_name="${output_name}.exe"
-            fi
-            
-            echo "Building for ${os}/${arch}..."
-            GOOS=$os GOARCH=$arch go build -ldflags "${LDFLAGS}" -o "$output_name" ./cmd/aiassist/
-            
-            # Create compressed archive
-            if [ "$os" = "windows" ]; then
-              (cd dist && zip "aiassist-${os}-${arch}.zip" "aiassist-${os}-${arch}.exe")
-            else
-              (cd dist && tar czf "aiassist-${os}-${arch}.tar.gz" "aiassist-${os}-${arch}")
-            fi
-          done
-
-      - name: Generate checksums
-        run: |
-          cd dist
-          sha256sum aiassist-* > checksums.txt
-          cat checksums.txt
+          VERSION="$VERSION" COMMIT="$COMMIT" scripts/build-all.sh
+          echo ""
+          cat dist/checksums.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -105,6 +65,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: binaries
+          retention-days: 7
           path: |
             dist/aiassist-*
             dist/checksums.txt
