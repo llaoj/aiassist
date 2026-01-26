@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
@@ -10,12 +12,37 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "aiassist",
+	Use:   "aiassist [question]",
 	Short: "AI Shell Assistant",
-	Long:  "An intelligent command-line tool for server operations and cloud-native operations, providing problem diagnosis, solution suggestions and command execution guidance.",
+	Long: `An intelligent command-line tool for server operations and cloud-native operations.
+
+Examples:
+  aiassist                      # Interactive mode
+  aiassist "your question"       # Ask question and exit
+  cmd | aiassist                # Analyze piped data
+  cmd | aiassist "question"      # Analyze piped data with context`,
+	// Disable unknown command error - treat unknown args as questions
+	FParseErrWhitelist: cobra.FParseErrWhitelist{
+		UnknownFlags: true,
+	},
+	DisableFlagParsing: false,
+	Args:               cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Enter interactive mode by default
-		interactiveMode()
+		// Get initial question if provided
+		var initialQuestion string
+		if len(args) > 0 {
+			initialQuestion = args[0]
+		}
+
+		// Check if there is pipe input
+		fileInfo, _ := os.Stdin.Stat()
+		if (fileInfo.Mode() & os.ModeCharDevice) == 0 {
+			// Pipe mode
+			runPipeMode(initialQuestion)
+		} else {
+			// Interactive mode
+			runInteractiveMode(initialQuestion)
+		}
 	},
 }
 

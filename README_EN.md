@@ -41,7 +41,81 @@ curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/scripts/install
 
 For detailed installation instructions, see [INSTALL.md](INSTALL.md)
 
-## 📖 Configuration
+## 📖 Common Commands
+
+```bash
+# View version
+aiassist version
+
+# Configuration wizard
+aiassist config
+
+# Add Provider
+aiassist config provider add
+
+# List all Providers
+aiassist config provider list
+
+# Enable/Disable Provider
+aiassist config provider enable <name>
+aiassist config provider disable <name>
+
+# Delete Provider
+aiassist config provider delete <name>
+
+# Enable/Disable model
+aiassist config model enable <provider/model-name>
+aiassist config model disable <provider/model-name>
+
+# Set default model
+aiassist config model default <provider/model-name>
+
+# View current configuration
+aiassist config view
+
+# View help
+aiassist --help
+```
+
+## � Usage Modes
+
+### Interactive Mode
+
+**Mode 1: Enter Interactive Conversation**
+
+```bash
+aiassist
+```
+
+**Mode 2: Single Question & Answer (No Interactive Loop)**
+
+```bash
+aiassist "Why is the server load high?"
+```
+
+### Pipe Analysis Mode
+
+Directly analyze command output:
+
+```bash
+# Analyze piped data only (AI infers the question)
+tail -f /var/log/nginx/access.log | aiassist
+
+# Analyze with context question (Recommended)
+docker ps -a | aiassist "Analyze container status"
+cat go.sum | aiassist "Analyze output of cat go.sum"
+
+# Analyze error logs with specific question
+journalctl -u nginx -n 100 | aiassist "Find the cause of errors"
+```
+
+**Workflow:**
+1. Piped command output serves as input
+2. AI automatically analyzes data and identifies issues
+3. Provides diagnostic conclusions and solutions
+4. Offers executable remediation commands
+
+## �🔧 Configuration
 
 ### API Key Information
 

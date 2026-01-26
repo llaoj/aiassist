@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -32,6 +33,30 @@ func NewCommandExecutor() *CommandExecutor {
 	return &CommandExecutor{}
 }
 
+// readUserInput reads input from terminal (handles both interactive and pipe mode)
+func (ce *CommandExecutor) readUserInput() (string, error) {
+	// Try to open /dev/tty for reading user input
+	// This works even when stdin is a pipe
+	tty, err := os.Open("/dev/tty")
+	if err != nil {
+		// Fallback to stdin if /dev/tty is not available
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return "", err
+		}
+		return strings.TrimSpace(input), nil
+	}
+	defer tty.Close()
+
+	reader := bufio.NewReader(tty)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(input), nil
+}
+
 // DisplayCommand displays the command and gets user confirmation
 func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, translator *i18n.I18n) bool {
 	if cmdType == QueryCommand {
@@ -39,11 +64,15 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 		color.Green(translator.T("executor.query_command") + "\n")
 		color.Green("%s\n", cmdText)
 
-		// Ask for confirmation
-		var input string
-		color.Yellow("\n" + translator.T("executor.execute_prompt"))
-		fmt.Scanln(&input)
-		input = strings.ToLower(strings.TrimSpace(input))
+		// Ask for confirmation (prompt on same line as input)
+		fmt.Print("\n")
+		color.New(color.FgYellow).Print(translator.T("executor.execute_prompt"))
+		input, err := ce.readUserInput()
+		if err != nil {
+			color.Red("Failed to read input: %v\n", err)
+			return false
+		}
+		input = strings.ToLower(input)
 
 		if input == "exit" {
 			color.Yellow("Exiting...\n")
@@ -63,11 +92,15 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 		color.Red(translator.T("executor.modify_command") + "\n")
 		color.Red("%s\n", cmdText)
 
-		// First confirmation
-		var input string
-		color.Yellow("\n" + translator.T("executor.execute_prompt"))
-		fmt.Scanln(&input)
-		input = strings.ToLower(strings.TrimSpace(input))
+		// First confirmation (prompt on same line as input)
+		fmt.Print("\n")
+		color.New(color.FgYellow).Print(translator.T("executor.execute_prompt"))
+		input, err := ce.readUserInput()
+		if err != nil {
+			color.Red("Failed to read input: %v\n", err)
+			return false
+		}
+		input = strings.ToLower(input)
 
 		if input == "exit" {
 			color.Yellow("Exiting...\n")
@@ -79,10 +112,15 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 			return false
 		}
 
-		// Second confirmation for critical operations (only after yes)
-		color.Red("\n" + translator.T("executor.modify_warning"))
-		fmt.Scanln(&input)
-		input = strings.ToLower(strings.TrimSpace(input))
+		// Second confirmation for critical operations (only after yes, prompt on same line)
+		fmt.Print("\n")
+		color.New(color.FgRed).Print(translator.T("executor.modify_warning"))
+		input, err = ce.readUserInput()
+		if err != nil {
+			color.Red("Failed to read input: %v\n", err)
+			return false
+		}
+		input = strings.ToLower(input)
 
 		if input == "exit" {
 			color.Yellow("Exiting...\n")
@@ -134,21 +172,22 @@ func (ce *CommandExecutor) ExtractCommands(response string) []Command {
 	lines := strings.Split(response, "\n")
 
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
+		// Trim leading/trailing spaces for detection, but preserve original for processing
+		trimmedLine := strings.TrimSpace(line)
 
-		if line == "" {
+		if trimmedLine == "" {
 			continue
 		}
 
 		var cmdType CommandType
 		var cmdText string
 
-		if strings.HasPrefix(line, "[cmd:query]") {
+		if strings.HasPrefix(trimmedLine, "[cmd:query]") {
 			cmdType = QueryCommand
-			cmdText = strings.TrimPrefix(line, "[cmd:query]")
-		} else if strings.HasPrefix(line, "[cmd:modify]") {
+			cmdText = strings.TrimPrefix(trimmedLine, "[cmd:query]")
+		} else if strings.HasPrefix(trimmedLine, "[cmd:modify]") {
 			cmdType = ModifyCommand
-			cmdText = strings.TrimPrefix(line, "[cmd:modify]")
+			cmdText = strings.TrimPrefix(trimmedLine, "[cmd:modify]")
 		} else {
 			continue
 		}

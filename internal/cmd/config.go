@@ -90,6 +90,60 @@ var configProviderDisableCmd = &cobra.Command{
 	},
 }
 
+var configModelCmd = &cobra.Command{
+	Use:   "model",
+	Short: "Manage LLM models",
+	Long:  "Enable, disable, or set default model",
+}
+
+var configModelEnableCmd = &cobra.Command{
+	Use:   "enable <provider/model-name>",
+	Short: "Enable a model",
+	Long:  "Enable a specific model (format: provider/model-name)",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) == 0 {
+			color.Red("Please specify model in format: provider/model-name\n")
+			return
+		}
+		enableModel(args[0])
+	},
+}
+
+var configModelDisableCmd = &cobra.Command{
+	Use:   "disable <provider/model-name>",
+	Short: "Disable a model",
+	Long:  "Disable a specific model (format: provider/model-name)",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) == 0 {
+			color.Red("Please specify model in format: provider/model-name\n")
+			return
+		}
+		disableModel(args[0])
+	},
+}
+
+var configModelDefaultCmd = &cobra.Command{
+	Use:   "default <provider/model-name>",
+	Short: "Set default model",
+	Long:  "Set a model as the default (format: provider/model-name)",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) == 0 {
+			color.Red("Please specify model in format: provider/model-name\n")
+			return
+		}
+		setDefaultModel(args[0])
+	},
+}
+
+var configViewCmd = &cobra.Command{
+	Use:   "view",
+	Short: "View current configuration",
+	Long:  "Display current configuration details including language, proxy, default model and all providers",
+	Run: func(cmd *cobra.Command, args []string) {
+		viewConfig()
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(configCmd)
 
@@ -99,6 +153,13 @@ func init() {
 	configProviderCmd.AddCommand(configProviderListCmd)
 	configProviderCmd.AddCommand(configProviderEnableCmd)
 	configProviderCmd.AddCommand(configProviderDisableCmd)
+
+	configCmd.AddCommand(configModelCmd)
+	configModelCmd.AddCommand(configModelEnableCmd)
+	configModelCmd.AddCommand(configModelDisableCmd)
+	configModelCmd.AddCommand(configModelDefaultCmd)
+
+	configCmd.AddCommand(configViewCmd)
 }
 
 func addProviderInteractive() {
@@ -354,7 +415,7 @@ func listProviders() {
 				}
 			}
 
-			fmt.Printf("     - %s [%s]\n", modelCfg.Name, modelStatus)
+			fmt.Printf("     - %s [%s]\n", modelKey, modelStatus)
 		}
 		fmt.Println()
 	}
@@ -404,6 +465,219 @@ func disableProvider(providerName string) {
 	}
 
 	color.Green(fmt.Sprintf("✓ Provider '%s' disabled successfully\n", providerName))
+}
+
+func enableModel(modelKey string) {
+	// Parse provider/model-name
+	parts := strings.SplitN(modelKey, "/", 2)
+	if len(parts) != 2 {
+		color.Red("Invalid format. Please use: provider/model-name\n")
+		return
+	}
+
+	providerName := parts[0]
+	modelName := parts[1]
+
+	cfg := config.Get()
+	provider := cfg.GetProvider(providerName)
+
+	if provider == nil {
+		color.Red(fmt.Sprintf("Provider '%s' not found\n", providerName))
+		return
+	}
+
+	// Find and enable the model
+	found := false
+	for _, model := range provider.Models {
+		if model.Name == modelName {
+			if model.Enabled {
+				color.Yellow(fmt.Sprintf("Model '%s' is already enabled\n", modelKey))
+				return
+			}
+			model.Enabled = true
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		color.Red(fmt.Sprintf("Model '%s' not found in provider '%s'\n", modelName, providerName))
+		return
+	}
+
+	if err := cfg.AddProvider(providerName, provider); err != nil {
+		color.Red(fmt.Sprintf("Failed to enable model: %v\n", err))
+		return
+	}
+
+	color.Green(fmt.Sprintf("✓ Model '%s' enabled successfully\n", modelKey))
+}
+
+func disableModel(modelKey string) {
+	// Parse provider/model-name
+	parts := strings.SplitN(modelKey, "/", 2)
+	if len(parts) != 2 {
+		color.Red("Invalid format. Please use: provider/model-name\n")
+		return
+	}
+
+	providerName := parts[0]
+	modelName := parts[1]
+
+	cfg := config.Get()
+	provider := cfg.GetProvider(providerName)
+
+	if provider == nil {
+		color.Red(fmt.Sprintf("Provider '%s' not found\n", providerName))
+		return
+	}
+
+	// Find and disable the model
+	found := false
+	for _, model := range provider.Models {
+		if model.Name == modelName {
+			if !model.Enabled {
+				color.Yellow(fmt.Sprintf("Model '%s' is already disabled\n", modelKey))
+				return
+			}
+			model.Enabled = false
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		color.Red(fmt.Sprintf("Model '%s' not found in provider '%s'\n", modelName, providerName))
+		return
+	}
+
+	if err := cfg.AddProvider(providerName, provider); err != nil {
+		color.Red(fmt.Sprintf("Failed to disable model: %v\n", err))
+		return
+	}
+
+	color.Green(fmt.Sprintf("✓ Model '%s' disabled successfully\n", modelKey))
+}
+
+func setDefaultModel(modelKey string) {
+	// Parse provider/model-name
+	parts := strings.SplitN(modelKey, "/", 2)
+	if len(parts) != 2 {
+		color.Red("Invalid format. Please use: provider/model-name\n")
+		return
+	}
+
+	providerName := parts[0]
+	modelName := parts[1]
+
+	cfg := config.Get()
+	provider := cfg.GetProvider(providerName)
+
+	if provider == nil {
+		color.Red(fmt.Sprintf("Provider '%s' not found\n", providerName))
+		return
+	}
+
+	// Check if model exists and is enabled
+	found := false
+	enabled := false
+	for _, model := range provider.Models {
+		if model.Name == modelName {
+			found = true
+			enabled = model.Enabled
+			break
+		}
+	}
+
+	if !found {
+		color.Red(fmt.Sprintf("Model '%s' not found in provider '%s'\n", modelName, providerName))
+		return
+	}
+
+	if !enabled {
+		color.Red(fmt.Sprintf("Model '%s' is disabled. Please enable it first.\n", modelKey))
+		return
+	}
+
+	// Set as default
+	cfg.DefaultModel = modelKey
+	if err := cfg.Save(); err != nil {
+		color.Red(fmt.Sprintf("Failed to set default model: %v\n", err))
+		return
+	}
+
+	color.Green(fmt.Sprintf("✓ Default model set to '%s'\n", modelKey))
+}
+
+func viewConfig() {
+	cfg := config.Get()
+
+	fmt.Printf("\n%s\n", ui.Separator())
+	fmt.Println("Current Configuration")
+	fmt.Printf("%s\n\n", ui.Separator())
+
+	// Language
+	lang := cfg.GetLanguage()
+	langDisplay := "English"
+	if lang == config.LanguageChinese {
+		langDisplay = "中文"
+	}
+	fmt.Printf("Language: %s (%s)\n", langDisplay, lang)
+
+	// HTTP Proxy
+	proxy := cfg.GetHTTPProxy()
+	if proxy == "" {
+		fmt.Printf("HTTP Proxy: Not configured\n")
+	} else {
+		fmt.Printf("HTTP Proxy: %s\n", proxy)
+	}
+
+	// Default Model
+	defaultModel := cfg.DefaultModel
+	if defaultModel == "" {
+		fmt.Printf("Default Model: Not set\n")
+	} else {
+		fmt.Printf("Default Model: %s\n", defaultModel)
+	}
+
+	// Config file location
+	fmt.Printf("Config File: %s\n", cfg.ConfigFile)
+
+	// Providers
+	allProviders := cfg.GetAllProviders()
+	if len(allProviders) == 0 {
+		fmt.Printf("\nProviders: None configured\n")
+	} else {
+		fmt.Printf("\nProviders: %d configured\n\n", len(allProviders))
+
+		for i, p := range allProviders {
+			status := "✓ Enabled"
+			if !p.Enabled {
+				status = "✗ Disabled"
+			}
+			fmt.Printf("%d. %s [%s]\n", i+1, p.Name, status)
+			fmt.Printf("   Base URL: %s\n", p.BaseURL)
+			fmt.Printf("   API Key: %s...%s\n", p.APIKey[:8], p.APIKey[len(p.APIKey)-4:])
+			fmt.Printf("   Models:\n")
+
+			for _, modelCfg := range p.Models {
+				modelKey := fmt.Sprintf("%s/%s", p.Name, modelCfg.Name)
+				modelStatus := "✓ Enabled"
+				if !modelCfg.Enabled {
+					modelStatus = "✗ Disabled"
+				}
+
+				// Mark default model
+				defaultMark := ""
+				if modelKey == defaultModel {
+					defaultMark = " [DEFAULT]"
+				}
+
+				fmt.Printf("     - %s [%s]%s\n", modelKey, modelStatus, defaultMark)
+			}
+			fmt.Println()
+		}
+	}
 }
 
 func interactiveConfig() error {

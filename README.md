@@ -69,10 +69,16 @@ aiassist config
 
 ### 交互式模式
 
-直接运行进入对话模式：
+**模式 1：进入交互对话**
 
 ```bash
 aiassist
+```
+
+**模式 2：单次问答（不进入交互）**
+
+```bash
+aiassist "服务器负载很高，帮我排查原因"
 ```
 
 示例对话：
@@ -108,13 +114,14 @@ ps aux | grep nginx
 直接分析命令输出：
 
 ```bash
-# 分析日志文件
+# 仅分析管道数据（AI 自动推断问题）
 tail -f /var/log/nginx/access.log | aiassist
 
-# 分析系统状态
+# 带上下文问题分析（推荐）
 docker ps -a | aiassist "分析容器状态"
+cat go.sum | aiassist "分析 cat go.sum 的输出"
 
-# 分析错误日志
+# 分析错误日志并指定问题
 journalctl -u nginx -n 100 | aiassist "找出错误原因"
 ```
 
@@ -145,6 +152,16 @@ aiassist config provider disable <name>
 
 # 删除 Provider
 aiassist config provider delete <name>
+
+# 启用/禁用模型
+aiassist config model enable <provider/model-name>
+aiassist config model disable <provider/model-name>
+
+# 设置默认模型
+aiassist config model default <provider/model-name>
+
+# 查看当前配置
+aiassist config view
 
 # 查看帮助
 aiassist --help

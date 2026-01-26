@@ -3,7 +3,7 @@ package ui
 import "strings"
 
 const (
-	separatorChar  = "═"
+	separatorChar  = "-"
 	separatorCount = 35
 )
 
