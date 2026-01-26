@@ -85,6 +85,9 @@ var EnglishMessages = map[string]string{
 	"executor.confirm_execution":    "Found command to execute:",
 	"executor.confirm_prompt":       "Execute? (y/n, default: y): ",
 	"executor.no_output":            "(Command executed successfully, but no output)",
+	"executor.cancelled":            "Cancelled",
+	"executor.exiting":              "Exiting...",
+	"executor.read_input_failed":    "Failed to read input: %v",
 	// Output truncation messages
 	"output.truncated": "omitted %d lines of output",
 	// Error messages

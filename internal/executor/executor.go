@@ -69,18 +69,18 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 		color.New(color.FgYellow).Print(translator.T("executor.execute_prompt"))
 		input, err := ce.readUserInput()
 		if err != nil {
-			color.Red("Failed to read input: %v\n", err)
+			color.Red(translator.T("executor.read_input_failed", err) + "\n")
 			return false
 		}
 		input = strings.ToLower(input)
 
 		if input == "exit" {
-			color.Yellow("Exiting...\n")
+			color.Yellow(translator.T("executor.exiting") + "\n")
 			os.Exit(0)
 		}
 
 		if input != "yes" && input != "y" {
-			color.Yellow("Cancelled\n")
+			color.Yellow(translator.T("executor.cancelled") + "\n")
 			return false
 		}
 
@@ -97,18 +97,18 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 		color.New(color.FgYellow).Print(translator.T("executor.execute_prompt"))
 		input, err := ce.readUserInput()
 		if err != nil {
-			color.Red("Failed to read input: %v\n", err)
+			color.Red(translator.T("executor.read_input_failed", err) + "\n")
 			return false
 		}
 		input = strings.ToLower(input)
 
 		if input == "exit" {
-			color.Yellow("Exiting...\n")
+			color.Yellow(translator.T("executor.exiting") + "\n")
 			os.Exit(0)
 		}
 
 		if input != "yes" && input != "y" {
-			color.Yellow("Cancelled\n")
+			color.Yellow(translator.T("executor.cancelled") + "\n")
 			return false
 		}
 
@@ -117,18 +117,18 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 		color.New(color.FgRed).Print(translator.T("executor.modify_warning"))
 		input, err = ce.readUserInput()
 		if err != nil {
-			color.Red("Failed to read input: %v\n", err)
+			color.Red(translator.T("executor.read_input_failed", err) + "\n")
 			return false
 		}
 		input = strings.ToLower(input)
 
 		if input == "exit" {
-			color.Yellow("Exiting...\n")
+			color.Yellow(translator.T("executor.exiting") + "\n")
 			os.Exit(0)
 		}
 
 		if input != "yes" && input != "y" {
-			color.Yellow("Cancelled\n")
+			color.Yellow(translator.T("executor.cancelled") + "\n")
 			return false
 		}
 

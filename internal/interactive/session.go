@@ -30,6 +30,7 @@ type Session struct {
 	history    []SessionMessage
 	translator *i18n.I18n
 	rl         *readline.Instance
+	tty        io.Writer // /dev/tty for manual prompt output
 }
 
 // NewSession creates a new interactive session
@@ -56,7 +57,44 @@ func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
 	}
 
 	// Initialize readline for interactive input
-	rl, err := readline.New("")
+	// Check if stdin is a terminal or a pipe
+	stdinStat, _ := os.Stdin.Stat()
+	isPipe := (stdinStat.Mode() & os.ModeCharDevice) == 0
+
+	var rlConfig *readline.Config
+	if isPipe {
+		// stdin is a pipe, use /dev/tty for both input and output
+		tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+		if err != nil {
+			color.Yellow("Warning: failed to open /dev/tty: %v\n", err)
+			// Fallback to default
+			rlConfig = &readline.Config{
+				Prompt:          "",
+				InterruptPrompt: "^C",
+				EOFPrompt:       "exit",
+			}
+		} else {
+			session.tty = tty
+			rlConfig = &readline.Config{
+				Prompt:          "",
+				Stdin:           readline.NewCancelableStdin(tty),
+				Stdout:          tty,
+				Stderr:          os.Stderr,
+				InterruptPrompt: "^C",
+				EOFPrompt:       "exit",
+			}
+		}
+	} else {
+		// stdin is a terminal, use default stdin/stdout
+		session.tty = os.Stdout
+		rlConfig = &readline.Config{
+			Prompt:          "",
+			InterruptPrompt: "^C",
+			EOFPrompt:       "exit",
+		}
+	}
+
+	rl, err := readline.NewEx(rlConfig)
 	if err != nil {
 		color.Yellow("Warning: failed to initialize readline: %v\n", err)
 	}
@@ -96,8 +134,18 @@ func (s *Session) readUserInput(prompt string) (string, error) {
 		return "", fmt.Errorf("readline not initialized")
 	}
 
-	s.rl.SetPrompt(prompt)
+	// In pipe mode, manually write prompt to /dev/tty
+	// In interactive mode, use readline's SetPrompt
+	if s.tty != os.Stdout {
+		// Pipe mode: s.tty is /dev/tty file, manually print prompt
+		fmt.Fprint(s.tty, prompt)
+	} else {
+		// Interactive mode: use readline's SetPrompt
+		s.rl.SetPrompt(prompt)
+	}
+
 	line, err := s.rl.Readline()
+
 	if err != nil {
 		return "", err
 	}
@@ -221,8 +269,14 @@ func (s *Session) RunWithPipe(initialQuestion string) error {
 	commands := s.executor.ExtractCommands(response)
 	if len(commands) > 0 {
 		s.handleCommands(commands)
+	} else {
+		// No commands found, show completion message
+		color.Cyan(ui.Separator() + "\n")
+		color.Green(s.translator.T("interactive.analysis_complete") + "\n")
+		color.Cyan(ui.Separator() + "\n")
 	}
 
+	// Enter interactive loop to allow user to ask more questions
 	return s.runInteractiveLoop()
 }
 
@@ -287,7 +341,6 @@ func (s *Session) handleCommands(commands []executor.Command) {
 	for _, cmd := range commands {
 		// Execute command with confirmation
 		if !s.executor.DisplayCommand(cmd.Text, cmd.Type, s.translator) {
-			color.Yellow("Skipped\n")
 			continue
 		}
 
@@ -322,9 +375,12 @@ func (s *Session) handleCommands(commands []executor.Command) {
 		}
 	}
 
-	// If no command was executed (all skipped), we should exit or return
+	// If no command was executed (all skipped), show message and return to let caller continue
 	if !executedAny {
+		color.Cyan(ui.Separator() + "\n")
 		color.Yellow(s.translator.T("interactive.all_commands_skipped") + "\n")
+		color.Green(s.translator.T("interactive.analysis_complete") + "\n")
+		color.Cyan(ui.Separator() + "\n")
 		return
 	}
 }

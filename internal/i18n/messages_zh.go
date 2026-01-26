@@ -87,6 +87,9 @@ var ChineseMessages = map[string]string{
 	"executor.confirm_execution":    "发现待执行命令:",
 	"executor.confirm_prompt":       "是否执行? (y/n, 默认: y): ",
 	"executor.no_output":            "(命令执行成功，但没有输出)",
+	"executor.cancelled":            "已取消",
+	"executor.exiting":              "退出中...",
+	"executor.read_input_failed":    "读取输入失败: %v",
 
 	// Output truncation messages
 	"output.truncated": "省略 %d 行输出",
