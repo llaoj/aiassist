@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -33,109 +32,20 @@ func NewCommandExecutor() *CommandExecutor {
 	return &CommandExecutor{}
 }
 
-// readUserInput reads input from terminal (handles both interactive and pipe mode)
-func (ce *CommandExecutor) readUserInput() (string, error) {
-	// Try to open /dev/tty for reading user input
-	// This works even when stdin is a pipe
-	tty, err := os.Open("/dev/tty")
-	if err != nil {
-		// Fallback to stdin if /dev/tty is not available
-		reader := bufio.NewReader(os.Stdin)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			return "", err
-		}
-		return strings.TrimSpace(input), nil
+// GetCommandTypeInfo returns the localized label and color for a command type
+func (ce *CommandExecutor) GetCommandTypeInfo(cmdType CommandType, translator *i18n.I18n) (string, *color.Color) {
+	if cmdType == QueryCommand {
+		return translator.T("executor.query_command"), color.New(color.FgGreen)
 	}
-	defer tty.Close()
-
-	reader := bufio.NewReader(tty)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(input), nil
+	return translator.T("executor.modify_command"), color.New(color.FgRed)
 }
 
-// DisplayCommand displays the command and gets user confirmation
-func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, translator *i18n.I18n) bool {
-	if cmdType == QueryCommand {
-		// Query command (display in green, requires confirmation)
-		color.Green(translator.T("executor.query_command") + "\n")
-		color.Green("%s\n", cmdText)
-
-		// Ask for confirmation (prompt on same line as input)
-		fmt.Print("\n")
-		color.New(color.FgYellow).Print(translator.T("executor.execute_prompt"))
-		input, err := ce.readUserInput()
-		if err != nil {
-			color.Red(translator.T("executor.read_input_failed", err) + "\n")
-			return false
-		}
-		input = strings.ToLower(input)
-
-		if input == "exit" {
-			color.Yellow(translator.T("executor.exiting") + "\n")
-			os.Exit(0)
-		}
-
-		if input != "yes" && input != "y" {
-			color.Yellow(translator.T("executor.cancelled") + "\n")
-			return false
-		}
-
-		return true
-	}
-
-	if cmdType == ModifyCommand {
-		// Modify command (display in red, requires confirmation)
-		color.Red(translator.T("executor.modify_command") + "\n")
-		color.Red("%s\n", cmdText)
-
-		// First confirmation (prompt on same line as input)
-		fmt.Print("\n")
-		color.New(color.FgYellow).Print(translator.T("executor.execute_prompt"))
-		input, err := ce.readUserInput()
-		if err != nil {
-			color.Red(translator.T("executor.read_input_failed", err) + "\n")
-			return false
-		}
-		input = strings.ToLower(input)
-
-		if input == "exit" {
-			color.Yellow(translator.T("executor.exiting") + "\n")
-			os.Exit(0)
-		}
-
-		if input != "yes" && input != "y" {
-			color.Yellow(translator.T("executor.cancelled") + "\n")
-			return false
-		}
-
-		// Second confirmation for critical operations (only after yes, prompt on same line)
-		fmt.Print("\n")
-		color.New(color.FgRed).Print(translator.T("executor.modify_warning"))
-		input, err = ce.readUserInput()
-		if err != nil {
-			color.Red(translator.T("executor.read_input_failed", err) + "\n")
-			return false
-		}
-		input = strings.ToLower(input)
-
-		if input == "exit" {
-			color.Yellow(translator.T("executor.exiting") + "\n")
-			os.Exit(0)
-		}
-
-		if input != "yes" && input != "y" {
-			color.Yellow(translator.T("executor.cancelled") + "\n")
-			return false
-		}
-
-		return true
-	}
-
-	return false
+// DisplayCommand displays the command (without user confirmation - that's handled by session)
+func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, translator *i18n.I18n) {
+	label, colorFn := ce.GetCommandTypeInfo(cmdType, translator)
+	colorFn.Println(label)
+	colorFn.Println(cmdText)
+	fmt.Println()
 }
 
 // ExecuteCommand executes the command
@@ -152,17 +62,8 @@ func (ce *CommandExecutor) ExecuteCommand(command string) (string, error) {
 
 	// For commands, non-zero exit status is not always an error
 	// (e.g., grep with no matches returns 1, command not found returns 127)
-	// We return the output regardless, and only return error for modify commands
+	// We return the output regardless
 	return string(output), nil
-}
-
-// ExecuteWithConfirmation displays the command and executes after user confirmation
-func (ce *CommandExecutor) ExecuteWithConfirmation(cmd Command, translator *i18n.I18n) (string, error) {
-	if !ce.DisplayCommand(cmd.Text, cmd.Type, translator) {
-		return "", fmt.Errorf("user cancelled command execution")
-	}
-
-	return ce.ExecuteCommand(cmd.Text)
 }
 
 // ExtractCommands extracts executable commands from AI response text

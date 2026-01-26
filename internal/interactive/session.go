@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/chzyer/readline"
 	"github.com/fatih/color"
 	"github.com/llaoj/aiassist/internal/executor"
 	"github.com/llaoj/aiassist/internal/i18n"
@@ -15,6 +14,7 @@ import (
 	"github.com/llaoj/aiassist/internal/prompt"
 	"github.com/llaoj/aiassist/internal/sysinfo"
 	"github.com/llaoj/aiassist/internal/ui"
+	"github.com/peterh/liner"
 )
 
 // SessionMessage represents a message in the session
@@ -25,12 +25,13 @@ type SessionMessage struct {
 
 // Session represents an interactive session with user
 type Session struct {
-	llmManager *llm.Manager
-	executor   *executor.CommandExecutor
-	history    []SessionMessage
-	translator *i18n.I18n
-	rl         *readline.Instance
-	tty        io.Writer // /dev/tty for manual prompt output
+	llmManager    *llm.Manager
+	executor      *executor.CommandExecutor
+	history       []SessionMessage
+	translator    *i18n.I18n
+	line          *liner.State
+	originalStdin *os.File // Store original stdin for pipe mode
+	tty           *os.File // /dev/tty file for pipe mode input
 }
 
 // NewSession creates a new interactive session
@@ -56,49 +57,28 @@ func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
 		})
 	}
 
-	// Initialize readline for interactive input
-	// Check if stdin is a terminal or a pipe
+	// Initialize liner for interactive input
 	stdinStat, _ := os.Stdin.Stat()
 	isPipe := (stdinStat.Mode() & os.ModeCharDevice) == 0
 
-	var rlConfig *readline.Config
 	if isPipe {
-		// stdin is a pipe, use /dev/tty for both input and output
-		tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
-		if err != nil {
-			color.Yellow("Warning: failed to open /dev/tty: %v\n", err)
-			// Fallback to default
-			rlConfig = &readline.Config{
-				Prompt:          "",
-				InterruptPrompt: "^C",
-				EOFPrompt:       "exit",
-			}
-		} else {
+		// Save original stdin for reading pipe data
+		session.originalStdin = os.Stdin
+
+		// Open /dev/tty for user interaction
+		if tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0); err == nil {
 			session.tty = tty
-			rlConfig = &readline.Config{
-				Prompt:          "",
-				Stdin:           readline.NewCancelableStdin(tty),
-				Stdout:          tty,
-				Stderr:          os.Stderr,
-				InterruptPrompt: "^C",
-				EOFPrompt:       "exit",
-			}
-		}
-	} else {
-		// stdin is a terminal, use default stdin/stdout
-		session.tty = os.Stdout
-		rlConfig = &readline.Config{
-			Prompt:          "",
-			InterruptPrompt: "^C",
-			EOFPrompt:       "exit",
+			// Redirect before creating liner so it binds to /dev/tty
+			os.Stdin = tty
+			os.Stdout = tty
+		} else {
+			color.Yellow("Warning: failed to open /dev/tty: %v\n", err)
 		}
 	}
 
-	rl, err := readline.NewEx(rlConfig)
-	if err != nil {
-		color.Yellow("Warning: failed to initialize readline: %v\n", err)
-	}
-	session.rl = rl
+	// Create liner (works for both pipe and terminal mode)
+	session.line = liner.NewLiner()
+	session.line.SetCtrlCAborts(true)
 
 	return session
 }
@@ -106,6 +86,9 @@ func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
 // Run starts the interactive session
 // If initialQuestion is provided, it will be processed and ask if user wants to continue
 func (s *Session) Run(initialQuestion string) error {
+	// Ensure liner is properly closed on exit
+	defer s.line.Close()
+
 	// Display welcome message
 	color.Cyan(ui.Separator() + "\n")
 	color.Cyan(s.translator.T("interactive.welcome") + "\n")
@@ -128,29 +111,82 @@ func (s *Session) Run(initialQuestion string) error {
 	return s.runInteractiveLoop()
 }
 
-// readUserInput reads input from terminal using readline
+// readUserInput reads input from terminal using liner
 func (s *Session) readUserInput(prompt string) (string, error) {
-	if s.rl == nil {
-		return "", fmt.Errorf("readline not initialized")
+	if s.line == nil {
+		return "", fmt.Errorf("liner not initialized")
 	}
 
-	// In pipe mode, manually write prompt to /dev/tty
-	// In interactive mode, use readline's SetPrompt
-	if s.tty != os.Stdout {
-		// Pipe mode: s.tty is /dev/tty file, manually print prompt
-		fmt.Fprint(s.tty, prompt)
-	} else {
-		// Interactive mode: use readline's SetPrompt
-		s.rl.SetPrompt(prompt)
-	}
+	// Flush any pending output before reading
+	os.Stdout.Sync()
 
-	line, err := s.rl.Readline()
-
+	// Read line with liner (supports Chinese, editing, cursor movement)
+	line, err := s.line.Prompt(prompt)
 	if err != nil {
+		// Handle Ctrl+C - exit gracefully
+		if err == liner.ErrPromptAborted {
+			color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
+			os.Exit(0)
+		}
 		return "", err
 	}
 
 	return strings.TrimSpace(line), nil
+}
+
+// confirmCommandExecution asks user to confirm command execution
+func (s *Session) confirmCommandExecution(cmdType executor.CommandType) bool {
+	// First confirmation
+	if !s.askConfirmation(s.translator.T("executor.execute_prompt")) {
+		return false
+	}
+
+	// Second confirmation for modify commands
+	if cmdType == executor.ModifyCommand {
+		fmt.Println()
+		if !s.askConfirmation(s.translator.T("executor.modify_warning")) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// askConfirmation prompts user for yes/no confirmation
+func (s *Session) askConfirmation(prompt string) bool {
+	// Print colored prompt
+	color.New(color.FgYellow).Fprint(os.Stdout, prompt)
+	os.Stdout.Sync()
+
+	// Use liner with empty prompt to read input
+	line, err := s.line.Prompt("")
+	if err != nil {
+		if err == liner.ErrPromptAborted {
+			color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
+			os.Exit(0)
+		}
+		if err == io.EOF {
+			color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
+			os.Exit(0)
+		}
+		color.Red(s.translator.T("executor.read_input_failed", err) + "\n")
+		return false
+	}
+
+	input := strings.TrimSpace(line)
+	input = strings.ToLower(input)
+
+	if input == "exit" {
+		color.Yellow(s.translator.T("executor.exiting") + "\n")
+		os.Exit(0)
+	}
+
+	if input != "yes" && input != "y" {
+		color.Yellow(s.translator.T("executor.cancelled") + "\n")
+		return false
+	}
+
+	return true
 }
 
 // buildConversationContext builds conversation context from history
@@ -175,35 +211,17 @@ func (s *Session) buildConversationContext() string {
 
 // processQuestion handles a single question and its response
 func (s *Session) processQuestion(userInput string) error {
-	// Add user message to history
 	s.history = append(s.history, SessionMessage{Role: "user", Content: userInput})
 
-	// Build conversation context from complete history
-	conversationContext := s.buildConversationContext()
-
-	// Call LLM with loading animation
-	ctx := context.Background()
-	systemPrompt := prompt.GetInteractivePrompt()
-	stopSpinner := ui.StartSpinner(s.translator.T("interactive.thinking"))
-	response, modelUsed, err := s.llmManager.CallWithFallbackSystemPrompt(ctx, systemPrompt, conversationContext)
-	if stopSpinner != nil {
-		stopSpinner()
-	}
-
+	response, modelUsed, err := s.callLLM(prompt.GetInteractivePrompt())
 	if err != nil {
 		return err
 	}
 
-	// Add assistant message to history
 	s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
+	s.displayResponse(modelUsed, response)
 
-	// Display response with model name on separate line
-	color.Cyan("\n[%s]\n", modelUsed)
-	color.Cyan("%s\n\n", response)
-
-	// Extract and execute commands from response
 	commands := s.executor.ExtractCommands(response)
-
 	if len(commands) > 0 {
 		s.handleCommands(commands)
 	}
@@ -211,22 +229,44 @@ func (s *Session) processQuestion(userInput string) error {
 	return nil
 }
 
+// callLLM calls the LLM with current conversation context
+func (s *Session) callLLM(systemPrompt string) (response string, modelUsed string, err error) {
+	conversationContext := s.buildConversationContext()
+	ctx := context.Background()
+	stopSpinner := ui.StartSpinner(s.translator.T("interactive.thinking"))
+	response, modelUsed, err = s.llmManager.CallWithFallbackSystemPrompt(ctx, systemPrompt, conversationContext)
+	if stopSpinner != nil {
+		stopSpinner()
+	}
+	return
+}
+
+// displayResponse displays AI response with model name
+func (s *Session) displayResponse(modelUsed, response string) {
+	color.Cyan("\n[%s]\n", modelUsed)
+	color.Cyan("%s\n\n", response)
+}
+
 // RunWithPipe runs with pipe input
-// initialQuestion is the user's question to be included as context
 func (s *Session) RunWithPipe(initialQuestion string) error {
-	// Read pipe data from stdin
-	pipeData, err := io.ReadAll(os.Stdin)
+	defer s.line.Close()
+
+	// Read pipe data from original stdin
+	stdinToRead := s.originalStdin
+	if stdinToRead == nil {
+		stdinToRead = os.Stdin
+	}
+
+	pipeData, err := io.ReadAll(stdinToRead)
 	if err != nil {
 		return err
 	}
 
-	// Truncate pipe data if too long
-	// Pipe mode is typically used for log analysis, so allow more data
-	// Keep within ~150k chars to leave room for system context and question
+	// Truncate if too long (~150k chars)
 	const maxPipeDataChars = 150000
 	truncatedPipeData := s.truncateOutput(string(pipeData), maxPipeDataChars)
 
-	// Build pipe input message with labels
+	// Build pipe message
 	var pipeMsg string
 	if initialQuestion != "" {
 		pipeMsg = fmt.Sprintf("%s\n%s%s\n\n%s\n%s",
@@ -239,44 +279,26 @@ func (s *Session) RunWithPipe(initialQuestion string) error {
 			s.translator.T("interactive.pipe_data"), truncatedPipeData)
 	}
 
-	// Add pipe data to history
+	// Process as a question with pipe analysis prompt
 	s.history = append(s.history, SessionMessage{Role: "user", Content: pipeMsg})
-
-	// Build context from history (includes system info)
-	conversationContext := s.buildConversationContext()
-
-	// Call LLM with pipe analysis prompt for standalone command analysis
-	ctx := context.Background()
-	systemPrompt := prompt.GetPipeAnalysisPrompt()
-	stopSpinner := ui.StartSpinner(s.translator.T("interactive.thinking"))
-	response, modelUsed, err := s.llmManager.CallWithFallbackSystemPrompt(ctx, systemPrompt, conversationContext)
-	if stopSpinner != nil {
-		stopSpinner()
-	}
-
+	response, modelUsed, err := s.callLLM(prompt.GetPipeAnalysisPrompt())
 	if err != nil {
 		return err
 	}
 
-	// Add assistant response to history
 	s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
+	s.displayResponse(modelUsed, response)
 
-	// Display response with model name on separate line
-	color.Cyan("\n[%s]\n", modelUsed)
-	color.Cyan("%s\n\n", response)
-
-	// Extract and process commands from response
+	// Handle commands or show completion
 	commands := s.executor.ExtractCommands(response)
 	if len(commands) > 0 {
 		s.handleCommands(commands)
 	} else {
-		// No commands found, show completion message
 		color.Cyan(ui.Separator() + "\n")
 		color.Green(s.translator.T("interactive.analysis_complete") + "\n")
 		color.Cyan(ui.Separator() + "\n")
 	}
 
-	// Enter interactive loop to allow user to ask more questions
 	return s.runInteractiveLoop()
 }
 
@@ -286,16 +308,12 @@ func (s *Session) runInteractiveLoop() error {
 		prompt := s.translator.T("interactive.input_prompt")
 		userInput, err := s.readUserInput(prompt)
 		if err != nil {
-			if err == readline.ErrInterrupt {
-				// Ctrl+C pressed
-				color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
-				os.Exit(0)
-			}
 			if err == io.EOF {
 				// EOF (Ctrl+D)
 				color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
 				return nil
 			}
+			// Note: Ctrl+C (liner.ErrPromptAborted) is handled in readUserInput
 			color.Red("Error: %v\n", err)
 			continue
 		}
@@ -339,8 +357,11 @@ func (s *Session) handleCommands(commands []executor.Command) {
 
 	// Process each command one by one
 	for _, cmd := range commands {
-		// Execute command with confirmation
-		if !s.executor.DisplayCommand(cmd.Text, cmd.Type, s.translator) {
+		// Display command
+		s.executor.DisplayCommand(cmd.Text, cmd.Type, s.translator)
+
+		// Get user confirmation
+		if !s.confirmCommandExecution(cmd.Type) {
 			continue
 		}
 
@@ -404,31 +425,23 @@ func (s *Session) truncateOutput(output string, maxChars int) string {
 	return fmt.Sprintf("%s\n\n... [%s] ...\n\n%s", head, truncationMsg, tail)
 }
 
-// analyzeCommandOutput analyzes command output and continues the investigation
+// analyzeCommandOutput analyzes command output and continues investigation
 func (s *Session) analyzeCommandOutput(cmd, output string) {
-	// Truncate output if too long (reserve space for context and history)
-	// Approximate: 1 char ≈ 0.3 tokens for Chinese/English mix, model max ≈ 128k tokens
-	// Keep output within ~100k chars to leave room for system context and history
+	// Truncate output if too long (~100k chars)
 	const maxOutputChars = 100000
 	truncatedOutput := s.truncateOutput(output, maxOutputChars)
 
-	// Add command execution to history
+	// Add execution result to history
 	executionMsg := fmt.Sprintf("[%s]\n%s\n\n[%s]\n%s",
 		s.translator.T("interactive.executed_command"), cmd,
 		s.translator.T("interactive.execution_output"), truncatedOutput)
 	s.history = append(s.history, SessionMessage{Role: "user", Content: executionMsg})
 
-	// Build complete conversation context
-	fullContext := s.buildConversationContext()
-
-	// Add instruction for next steps
-	instructionPrompt := fullContext + s.translator.T("interactive.continue_analysis")
-
-	// Call LLM with continue analysis prompt to handle the output and proceed with next steps
+	// Call LLM for analysis
+	fullContext := s.buildConversationContext() + s.translator.T("interactive.continue_analysis")
 	ctx := context.Background()
-	systemPrompt := prompt.GetContinueAnalysisPrompt()
 	stopSpinner := ui.StartSpinner(s.translator.T("interactive.thinking"))
-	response, modelUsed, err := s.llmManager.CallWithFallbackSystemPrompt(ctx, systemPrompt, instructionPrompt)
+	response, modelUsed, err := s.llmManager.CallWithFallbackSystemPrompt(ctx, prompt.GetContinueAnalysisPrompt(), fullContext)
 	if stopSpinner != nil {
 		stopSpinner()
 	}
@@ -438,38 +451,24 @@ func (s *Session) analyzeCommandOutput(cmd, output string) {
 		return
 	}
 
-	// Add analysis to history
 	s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
+	s.displayResponse(modelUsed, response)
 
-	// Display analysis with model name on separate line
-	color.Cyan("\n[%s]\n", modelUsed)
-	color.Cyan("%s\n\n", response)
-
-	// Extract new commands from analysis
+	// Handle new commands or ask to continue
 	newCommands := s.executor.ExtractCommands(response)
 	if len(newCommands) > 0 {
-		// Recursively handle new commands
 		s.handleCommands(newCommands)
 	} else {
-		// No more commands, ask if user wants to continue
-		prompt := s.translator.T("interactive.all_steps_complete")
-		input, err := s.readUserInput(prompt)
+		// Ask if user wants to continue
+		input, err := s.readUserInput(s.translator.T("interactive.all_steps_complete"))
 		if err != nil {
-			if err == readline.ErrInterrupt || err == io.EOF {
-				// User interrupted, return to main loop
-				return
-			}
-			color.Red("Failed to read input: %v\n", err)
-			return
+			return // Return to main loop on error or Ctrl+C
 		}
 
-		input = strings.TrimSpace(strings.ToLower(input))
-		if input == "y" || input == "yes" {
-			// User wants to continue, return to main loop for next question
-			return
+		if strings.ToLower(strings.TrimSpace(input)) == "y" || strings.ToLower(strings.TrimSpace(input)) == "yes" {
+			return // Continue to main loop
 		}
 
-		// User chose not to continue, exit program
 		color.Cyan(s.translator.T("interactive.goodbye") + "\n")
 		os.Exit(0)
 	}
