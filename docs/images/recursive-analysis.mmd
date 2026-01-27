@@ -1,0 +1,31 @@
+graph TD
+    A[用户提问:<br/>服务器负载很高] --> B[层级1: 检查系统负载]
+    B --> C[执行: top -b -n 1]
+    C --> D[输出: nginx进程CPU 98.3%<br/>内存 1.2GB]
+    
+    D --> E[层级2: 分析nginx状态]
+    E --> F[执行: ss -ant | grep :80 | wc -l]
+    F --> G[输出: 15,234 个活跃连接]
+    
+    G --> H[层级3: 分析连接来源]
+    H --> I[执行: ss -ant | awk ...]
+    I --> J[输出: 192.168.1.100<br/>占 60% 连接]
+    
+    J --> K[层级4: 检查IP请求模式]
+    K --> L[执行: tail access.log | grep 192.168.1.100]
+    L --> M[输出: 1分钟 523 次请求]
+    
+    M --> N[层级5: 诊断结论]
+    N --> O[建议: 封禁该IP<br/>启用限流策略]
+    
+    O --> P{是否继续?}
+    P --> |用户选择继续| Q[层级6: 提供封禁命令]
+    P --> |用户选择退出| R[结束分析]
+    
+    Q --> S[深度限制: 最多10层]
+    
+    style A fill:#FFE4B5
+    style N fill:#90EE90
+    style O fill:#87CEEB
+    style S fill:#FF6B6B
+    style P fill:#FFD700

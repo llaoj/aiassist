@@ -1,0 +1,46 @@
+graph TB
+    subgraph "查询命令流程 (绿色)"
+        A1[AI返回命令:<br/>ls, ps, grep, top...] --> B1[显示: 绿色]
+        B1 --> C1[提示: 是否执行此命令?<br/>y/n/exit]
+        C1 --> D1{用户输入}
+        D1 --> |y/yes| E1[✓ 执行命令]
+        D1 --> |n/no| F1[✗ 取消执行]
+        D1 --> |exit| G1[退出程序]
+        D1 --> |其他| H1[显示错误: 无效输入<br/>循环提示]
+        H1 --> C1
+        E1 --> I1[返回输出]
+    end
+    
+    subgraph "修改命令流程 (红色)"
+        A2[AI返回命令:<br/>rm, chmod, systemctl...] --> B2[显示: 红色 + 警告]
+        B2 --> C2[第一次确认:<br/>是否执行此命令?<br/>y/n/exit]
+        C2 --> D2{用户输入}
+        D2 --> |y/yes| E2[⚠️ 警告提示]
+        D2 --> |n/no| F2[✗ 取消执行]
+        D2 --> |exit| G2[退出程序]
+        D2 --> |其他| H2[显示错误: 无效输入<br/>循环提示]
+        H2 --> C2
+        
+        E2 --> I2[第二次确认:<br/>该命令将修改服务器配置<br/>是否确定执行?<br/>y/n/exit]
+        I2 --> J2{用户输入}
+        J2 --> |y/yes| K2[✓ 执行命令]
+        J2 --> |n/no| L2[✗ 取消执行]
+        J2 --> |exit| M2[退出程序]
+        J2 --> |其他| N2[显示错误: 无效输入<br/>循环提示]
+        N2 --> I2
+        K2 --> O2[返回输出]
+    end
+    
+    style A1 fill:#90EE90
+    style B1 fill:#90EE90
+    style E1 fill:#90EE90
+    
+    style A2 fill:#FF6B6B
+    style B2 fill:#FF6B6B
+    style E2 fill:#FFD700
+    style I2 fill:#FFD700
+    style K2 fill:#FF6B6B
+    
+    style H1 fill:#FFA500
+    style H2 fill:#FFA500
+    style N2 fill:#FFA500

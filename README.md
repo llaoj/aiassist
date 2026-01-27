@@ -69,6 +69,9 @@ aiassist config
 
 ### 交互式模式
 
+![交互式模式演示](docs/images/scenario-1.gif)
+*▲ 场景演示：服务器排查*
+
 **模式 1：进入交互对话**
 
 ```bash
@@ -110,6 +113,9 @@ ps aux | grep nginx
 - ✅ 自动读取上一条命令输出，进行连续分析
 
 ### 管道分析模式
+
+![管道模式演示](docs/images/scenario-2.gif)
+*▲ 管道模式：直接分析命令输出*
 
 直接分析命令输出：
 

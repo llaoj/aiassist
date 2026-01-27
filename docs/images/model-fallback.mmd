@@ -1,0 +1,38 @@
+sequenceDiagram
+    participant U as 用户
+    participant S as Session
+    participant M as LLM Manager
+    participant Q as Qwen (优先级1)
+    participant G as GPT-4 (优先级2)
+    participant D as DeepSeek (优先级3)
+    
+    U->>S: 输入问题
+    S->>M: 请求AI分析
+    
+    rect rgb(144, 238, 144)
+        Note over M,Q: 尝试第一优先级
+        M->>Q: 调用API
+        Q--xM: ❌ 超时 (timeout)
+        Note over M: Qwen不可用
+    end
+    
+    rect rgb(135, 206, 235)
+        Note over M,G: 自动切换到第二优先级
+        M->>S: ⚠️ 提示: Qwen不可用,切换到GPT-4
+        M->>G: 调用API
+        G--xM: ❌ 额度不足 (quota exceeded)
+        Note over M: GPT-4不可用
+    end
+    
+    rect rgb(255, 182, 193)
+        Note over M,D: 自动切换到第三优先级
+        M->>S: ⚠️ 提示: GPT-4额度不足,切换到DeepSeek
+        M->>D: 调用API
+        D->>M: ✓ 返回响应
+        Note over M: DeepSeek可用
+    end
+    
+    M->>S: ✓ 使用模型: DeepSeek
+    S->>U: 显示AI分析结果
+    
+    Note over U,D: 配置文件顺序决定优先级<br/>按顺序自动切换直到成功

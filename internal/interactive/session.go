@@ -243,6 +243,8 @@ func (s *Session) callLLM(systemPrompt string) (response string, modelUsed strin
 func (s *Session) displayResponse(modelUsed, response string) {
 	color.Cyan("[%s]\n", modelUsed)
 	color.Cyan("%s\n", response)
+	// Flush to ensure output appears immediately in pipe mode
+	os.Stdout.Sync()
 }
 
 // RunWithPipe runs with pipe input
@@ -294,6 +296,7 @@ func (s *Session) RunWithPipe(initialQuestion string) error {
 	// In pipe mode, just show the analysis and exit
 	// No interactive loop, no command execution
 	color.Green(s.translator.T("interactive.analysis_complete") + "\n")
+	os.Stdout.Sync() // Ensure all output is flushed
 
 	return nil
 }

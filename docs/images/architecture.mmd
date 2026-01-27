@@ -1,0 +1,51 @@
+graph TB
+    subgraph "用户交互层"
+        A[用户输入] --> B[Liner库]
+        B --> |UTF-8/中文支持| C[Session管理]
+    end
+    
+    subgraph "会话管理层"
+        C --> D{模式检测}
+        D --> |交互模式| E[Interactive Loop]
+        D --> |管道模式| F[Pipe Handler]
+        E --> G[历史管理]
+        F --> |限制1.6MB| G
+    end
+    
+    subgraph "AI推理层"
+        G --> H[Prompt生成]
+        H --> I[LLM Manager]
+        I --> J{多模型Fallback}
+        J --> |优先级1| K[Qwen]
+        J --> |优先级2| L[GPT-4]
+        J --> |优先级3| M[DeepSeek]
+        K -.失败.-> L
+        L -.失败.-> M
+    end
+    
+    subgraph "命令执行层"
+        I --> N[AI响应]
+        N --> O[命令提取器]
+        O --> P{命令分类}
+        P --> |绿色| Q[查询命令]
+        P --> |红色| R[修改命令]
+        Q --> S[一次确认]
+        R --> T[二次确认]
+        S --> U[Shell执行器]
+        T --> U
+    end
+    
+    subgraph "递归分析层"
+        U --> V[命令输出]
+        V --> |截断100K| W{递归深度检查}
+        W --> |<10层| G
+        W --> |>=10层| X[停止递归]
+        W --> |无新命令| Y[分析完成]
+    end
+    
+    style K fill:#90EE90
+    style L fill:#87CEEB
+    style M fill:#FFB6C1
+    style Q fill:#90EE90
+    style R fill:#FF6B6B
+    style W fill:#FFD700
