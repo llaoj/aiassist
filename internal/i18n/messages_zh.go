@@ -85,6 +85,7 @@ var ChineseMessages = map[string]string{
 	"executor.cancelled":            "已取消",
 	"executor.exiting":              "退出中...",
 	"executor.read_input_failed":    "读取输入失败: %v",
+	"executor.invalid_input":        "无效输入。请输入: y, n, 或 exit",
 
 	// Output truncation messages
 	"output.truncated": "省略 %d 行输出",

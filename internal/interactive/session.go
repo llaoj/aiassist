@@ -141,12 +141,8 @@ func (s *Session) confirmCommandExecution(cmdType executor.CommandType) bool {
 // Only accepts: y, n, exit (+ Enter), or Ctrl+C
 func (s *Session) askConfirmation(prompt string) bool {
 	for {
-		// Print colored prompt
-		color.New(color.FgYellow).Fprint(os.Stdout, prompt)
-		os.Stdout.Sync()
-
-		// Use liner with empty prompt to read input
-		line, err := s.line.Prompt("")
+		// Use liner with the prompt directly so it handles cursor properly
+		line, err := s.line.Prompt(prompt)
 		if err != nil {
 			if err == liner.ErrPromptAborted {
 				// Ctrl+C pressed
@@ -180,7 +176,7 @@ func (s *Session) askConfirmation(prompt string) bool {
 		}
 
 		// Invalid input - show error and re-prompt
-		color.Red("Invalid input. Please enter: y, n, or exit\n")
+		color.Red(s.translator.T("executor.invalid_input") + "\n")
 	}
 }
 
@@ -380,7 +376,7 @@ func (s *Session) handleCommands(commands []executor.Command) {
 
 	// If no command was executed (all skipped), show message and return to let caller continue
 	if !executedAny {
-		color.Yellow(s.translator.T("interactive.all_commands_skipped") + "\n")
+		// color.Yellow(s.translator.T("interactive.all_commands_skipped") + "\n")
 		color.Green(s.translator.T("interactive.analysis_complete") + "\n")
 		return
 	}
@@ -440,15 +436,10 @@ func (s *Session) analyzeCommandOutput(cmd, output string) {
 		s.handleCommands(newCommands)
 	} else {
 		// Ask if user wants to continue
-		input, err := s.readUserInput(s.translator.T("interactive.all_steps_complete"))
-		if err != nil {
-			return // Return to main loop on error or Ctrl+C
-		}
-
-		if strings.ToLower(strings.TrimSpace(input)) == "y" || strings.ToLower(strings.TrimSpace(input)) == "yes" {
+		if s.askConfirmation(s.translator.T("interactive.all_steps_complete")) {
 			return // Continue to main loop
 		}
-
+		// User chose 'n', exit program
 		color.Cyan(s.translator.T("interactive.goodbye") + "\n")
 		os.Exit(0)
 	}

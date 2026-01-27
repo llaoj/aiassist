@@ -83,6 +83,7 @@ var EnglishMessages = map[string]string{
 	"executor.cancelled":            "Cancelled",
 	"executor.exiting":              "Exiting...",
 	"executor.read_input_failed":    "Failed to read input: %v",
+	"executor.invalid_input":        "Invalid input. Please enter: y, n, or exit",
 	// Output truncation messages
 	"output.truncated": "omitted %d lines of output",
 	// Error messages
