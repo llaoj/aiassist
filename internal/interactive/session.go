@@ -25,13 +25,11 @@ type SessionMessage struct {
 
 // Session represents an interactive session with user
 type Session struct {
-	llmManager    *llm.Manager
-	executor      *executor.CommandExecutor
-	history       []SessionMessage
-	translator    *i18n.I18n
-	line          *liner.State
-	originalStdin *os.File // Store original stdin for pipe mode
-	tty           *os.File // /dev/tty file for pipe mode input
+	llmManager *llm.Manager
+	executor   *executor.CommandExecutor
+	history    []SessionMessage
+	translator *i18n.I18n
+	line       *liner.State
 }
 
 // NewSession creates a new interactive session
@@ -57,28 +55,15 @@ func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
 		})
 	}
 
-	// Initialize liner for interactive input
+	// Initialize liner for interactive input (only for normal mode)
 	stdinStat, _ := os.Stdin.Stat()
 	isPipe := (stdinStat.Mode() & os.ModeCharDevice) == 0
 
-	if isPipe {
-		// Save original stdin for reading pipe data
-		session.originalStdin = os.Stdin
-
-		// Open /dev/tty for user interaction
-		if tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0); err == nil {
-			session.tty = tty
-			// Redirect before creating liner so it binds to /dev/tty
-			os.Stdin = tty
-			os.Stdout = tty
-		} else {
-			color.Yellow("Warning: failed to open /dev/tty: %v\n", err)
-		}
+	if !isPipe {
+		// Create liner only for normal interactive mode
+		session.line = liner.NewLiner()
+		session.line.SetCtrlCAborts(true)
 	}
-
-	// Create liner (works for both pipe and terminal mode)
-	session.line = liner.NewLiner()
-	session.line.SetCtrlCAborts(true)
 
 	return session
 }
@@ -153,40 +138,50 @@ func (s *Session) confirmCommandExecution(cmdType executor.CommandType) bool {
 }
 
 // askConfirmation prompts user for yes/no confirmation
+// Only accepts: y, n, exit (+ Enter), or Ctrl+C
 func (s *Session) askConfirmation(prompt string) bool {
-	// Print colored prompt
-	color.New(color.FgYellow).Fprint(os.Stdout, prompt)
-	os.Stdout.Sync()
+	for {
+		// Print colored prompt
+		color.New(color.FgYellow).Fprint(os.Stdout, prompt)
+		os.Stdout.Sync()
 
-	// Use liner with empty prompt to read input
-	line, err := s.line.Prompt("")
-	if err != nil {
-		if err == liner.ErrPromptAborted {
-			color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
+		// Use liner with empty prompt to read input
+		line, err := s.line.Prompt("")
+		if err != nil {
+			if err == liner.ErrPromptAborted {
+				// Ctrl+C pressed
+				color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
+				os.Exit(0)
+			}
+			if err == io.EOF {
+				color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
+				os.Exit(0)
+			}
+			color.Red(s.translator.T("executor.read_input_failed", err) + "\n")
+			return false
+		}
+
+		input := strings.TrimSpace(line)
+		input = strings.ToLower(input)
+
+		// Handle valid inputs
+		if input == "exit" {
+			color.Yellow(s.translator.T("executor.exiting") + "\n")
 			os.Exit(0)
 		}
-		if err == io.EOF {
-			color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
-			os.Exit(0)
+
+		if input == "y" || input == "yes" {
+			return true
 		}
-		color.Red(s.translator.T("executor.read_input_failed", err) + "\n")
-		return false
+
+		if input == "n" || input == "no" {
+			color.Yellow(s.translator.T("executor.cancelled") + "\n")
+			return false
+		}
+
+		// Invalid input - show error and re-prompt
+		color.Red("Invalid input. Please enter: y, n, or exit\n")
 	}
-
-	input := strings.TrimSpace(line)
-	input = strings.ToLower(input)
-
-	if input == "exit" {
-		color.Yellow(s.translator.T("executor.exiting") + "\n")
-		os.Exit(0)
-	}
-
-	if input != "yes" && input != "y" {
-		color.Yellow(s.translator.T("executor.cancelled") + "\n")
-		return false
-	}
-
-	return true
 }
 
 // buildConversationContext builds conversation context from history
@@ -243,21 +238,14 @@ func (s *Session) callLLM(systemPrompt string) (response string, modelUsed strin
 
 // displayResponse displays AI response with model name
 func (s *Session) displayResponse(modelUsed, response string) {
-	color.Cyan("\n[%s]\n", modelUsed)
-	color.Cyan("%s\n\n", response)
+	color.Cyan("[%s]\n", modelUsed)
+	color.Cyan("%s\n", response)
 }
 
 // RunWithPipe runs with pipe input
 func (s *Session) RunWithPipe(initialQuestion string) error {
-	defer s.line.Close()
-
-	// Read pipe data from original stdin
-	stdinToRead := s.originalStdin
-	if stdinToRead == nil {
-		stdinToRead = os.Stdin
-	}
-
-	pipeData, err := io.ReadAll(stdinToRead)
+	// Read pipe data directly from stdin
+	pipeData, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		return err
 	}
@@ -289,17 +277,11 @@ func (s *Session) RunWithPipe(initialQuestion string) error {
 	s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
 	s.displayResponse(modelUsed, response)
 
-	// Handle commands or show completion
-	commands := s.executor.ExtractCommands(response)
-	if len(commands) > 0 {
-		s.handleCommands(commands)
-	} else {
-		color.Cyan(ui.Separator() + "\n")
-		color.Green(s.translator.T("interactive.analysis_complete") + "\n")
-		color.Cyan(ui.Separator() + "\n")
-	}
+	// In pipe mode, just show the analysis and exit
+	// No interactive loop, no command execution
+	color.Green(s.translator.T("interactive.analysis_complete") + "\n")
 
-	return s.runInteractiveLoop()
+	return nil
 }
 
 // runInteractiveLoop provides a unified interactive prompt loop for both Run and RunWithPipe
@@ -398,10 +380,8 @@ func (s *Session) handleCommands(commands []executor.Command) {
 
 	// If no command was executed (all skipped), show message and return to let caller continue
 	if !executedAny {
-		color.Cyan(ui.Separator() + "\n")
 		color.Yellow(s.translator.T("interactive.all_commands_skipped") + "\n")
 		color.Green(s.translator.T("interactive.analysis_complete") + "\n")
-		color.Cyan(ui.Separator() + "\n")
 		return
 	}
 }
