@@ -86,6 +86,7 @@ var ChineseMessages = map[string]string{
 	"executor.exiting":              "退出中...",
 	"executor.read_input_failed":    "读取输入失败: %v",
 	"executor.invalid_input":        "无效输入。请输入: y, n, 或 exit",
+	"executor.max_depth_reached":    "警告: 已达到最大命令分析深度。停止以防止无限递归。",
 
 	// Output truncation messages
 	"output.truncated": "省略 %d 行输出",

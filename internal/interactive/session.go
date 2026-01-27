@@ -25,21 +25,24 @@ type SessionMessage struct {
 
 // Session represents an interactive session with user
 type Session struct {
-	llmManager *llm.Manager
-	executor   *executor.CommandExecutor
-	history    []SessionMessage
-	translator *i18n.I18n
-	line       *liner.State
+	llmManager        *llm.Manager
+	executor          *executor.CommandExecutor
+	history           []SessionMessage
+	translator        *i18n.I18n
+	line              *liner.State
+	recursionDepth    int // Current recursion depth for command handling
+	maxRecursionDepth int // Maximum allowed recursion depth
 }
 
 // NewSession creates a new interactive session
 func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
 	// Initialize session
 	session := &Session{
-		llmManager: manager,
-		executor:   executor.NewCommandExecutor(),
-		history:    make([]SessionMessage, 0),
-		translator: translator,
+		llmManager:        manager,
+		executor:          executor.NewCommandExecutor(),
+		history:           make([]SessionMessage, 0),
+		translator:        translator,
+		maxRecursionDepth: 10, // Allow deeper analysis for complex troubleshooting scenarios
 	}
 
 	// Load or collect system info and add to history
@@ -71,8 +74,12 @@ func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
 // Run starts the interactive session
 // If initialQuestion is provided, it will be processed and ask if user wants to continue
 func (s *Session) Run(initialQuestion string) error {
-	// Ensure liner is properly closed on exit
-	defer s.line.Close()
+	// Ensure liner is properly closed on exit (only if not nil)
+	defer func() {
+		if s.line != nil {
+			s.line.Close()
+		}
+	}()
 
 	// Display welcome message
 	color.Cyan(ui.Separator() + "\n")
@@ -240,14 +247,25 @@ func (s *Session) displayResponse(modelUsed, response string) {
 
 // RunWithPipe runs with pipe input
 func (s *Session) RunWithPipe(initialQuestion string) error {
-	// Read pipe data directly from stdin
-	pipeData, err := io.ReadAll(os.Stdin)
+	// Read pipe data with memory limit to prevent exhaustion
+	// Based on mainstream LLM context windows (2026):
+	// - DeepSeek-V3: 64K tokens
+	// - GPT-4/Qwen: 128K tokens
+	// - Claude 3.5: 200K tokens
+	// - Gemini 1.5: 1M tokens
+	//
+	// For nginx logs (~3.5 chars/token):
+	// 400K chars ≈ 114K tokens ≈ 13,000 lines of nginx access logs
+	// Fits comfortably in most models with room for system prompt & history
+	const maxPipeDataBytes = 400000 * 4 // ~1.6MB, supports ~13k lines of nginx logs
+	limitedReader := io.LimitReader(os.Stdin, maxPipeDataBytes)
+	pipeData, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return err
 	}
 
-	// Truncate if too long (~150k chars)
-	const maxPipeDataChars = 150000
+	// Truncate if too long (~400k chars)
+	const maxPipeDataChars = 400000
 	truncatedPipeData := s.truncateOutput(string(pipeData), maxPipeDataChars)
 
 	// Build pipe message
@@ -327,6 +345,14 @@ func (s *Session) handleCommands(commands []executor.Command) {
 	if len(commands) == 0 {
 		return
 	}
+
+	// Check recursion depth to prevent stack overflow
+	if s.recursionDepth >= s.maxRecursionDepth {
+		color.Yellow(s.translator.T("executor.max_depth_reached") + "\n")
+		return
+	}
+	s.recursionDepth++
+	defer func() { s.recursionDepth-- }()
 
 	// Track if we executed at least one command
 	executedAny := false

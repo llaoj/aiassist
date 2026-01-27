@@ -19,7 +19,8 @@ func StartSpinner(message string) func() {
 		return func() {}
 	}
 
-	done := make(chan bool)
+	// Use buffered channel to prevent goroutine leak
+	done := make(chan bool, 1)
 
 	go func() {
 		dots := -1
@@ -49,11 +50,9 @@ func StartSpinner(message string) func() {
 
 	// Return stop function
 	return func() {
-		select {
-		case done <- true:
-		default:
-		}
-		// Give a moment for the goroutine to finish
-		time.Sleep(200 * time.Millisecond)
+		// Buffered channel ensures this won't block
+		done <- true
+		// Give a moment for the goroutine to finish clearing
+		time.Sleep(100 * time.Millisecond)
 	}
 }

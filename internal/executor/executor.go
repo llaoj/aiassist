@@ -52,18 +52,17 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 func (ce *CommandExecutor) ExecuteCommand(command string) (string, error) {
 	cmd := exec.Command("sh", "-c", command)
 
-	// Capture output
-	output, _ := cmd.CombinedOutput()
+	// Capture output and error
+	output, err := cmd.CombinedOutput()
 
 	// Print output to console
 	if len(output) > 0 {
 		fmt.Print(string(output))
 	}
 
-	// For commands, non-zero exit status is not always an error
-	// (e.g., grep with no matches returns 1, command not found returns 127)
-	// We return the output regardless
-	return string(output), nil
+	// Return both output and error
+	// Caller can decide whether to treat non-zero exit as error
+	return string(output), err
 }
 
 // ExtractCommands extracts executable commands from AI response text

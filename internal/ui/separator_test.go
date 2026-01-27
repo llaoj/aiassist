@@ -12,9 +12,9 @@ func TestSeparator(t *testing.T) {
 		t.Error("Expected separator to not be empty")
 	}
 
-	// Should contain double-line box-drawing characters
-	if !strings.Contains(sep, "═") {
-		t.Error("Expected separator to contain '═' characters")
+	// Should contain dash characters
+	if !strings.Contains(sep, "-") {
+		t.Error("Expected separator to contain '-' characters")
 	}
 
 	// Check length is reasonable

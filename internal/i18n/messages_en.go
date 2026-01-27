@@ -84,6 +84,7 @@ var EnglishMessages = map[string]string{
 	"executor.exiting":              "Exiting...",
 	"executor.read_input_failed":    "Failed to read input: %v",
 	"executor.invalid_input":        "Invalid input. Please enter: y, n, or exit",
+	"executor.max_depth_reached":    "Warning: Maximum command analysis depth reached. Stopping to prevent infinite recursion.",
 	// Output truncation messages
 	"output.truncated": "omitted %d lines of output",
 	// Error messages

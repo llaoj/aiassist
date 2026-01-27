@@ -267,7 +267,7 @@ func addProviderInteractive() {
 	}
 
 	color.Green(translator.T("config.openai_compat.added", providerName) + "\n")
-	fmt.Printf(translator.T("config.openai_compat.models_list", modelList) + "\n")
+	fmt.Printf("%s\n", translator.T("config.openai_compat.models_list", modelList))
 	color.Yellow("\n" + translator.T("config.openai_compat.order_hint") + "\n\n")
 }
 
