@@ -53,8 +53,8 @@ for platform in "${PLATFORMS[@]}"; do
     
     echo -e "${BLUE}Building for ${os}/${arch}...${NC}"
     
-    # Build
-    GOOS=$os GOARCH=$arch go build -ldflags "${LDFLAGS}" -o "$output_name" ./cmd/aiassist/
+    # Build with static linking (no CGO dependency)
+    CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -ldflags "${LDFLAGS}" -o "$output_name" ./cmd/aiassist/
     
     if [ $? -eq 0 ]; then
         # Get file size

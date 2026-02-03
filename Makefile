@@ -15,11 +15,11 @@ LDFLAGS = -ldflags "\
 # Default target
 build: ## Build the binary with version from git
 	@echo "Building $(BINARY_NAME) version=$(VERSION) commit=$(COMMIT)"
-	go build $(LDFLAGS) -o $(BINARY_NAME) ./cmd/aiassist/
+	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BINARY_NAME) ./cmd/aiassist/
 
 build-dev: ## Build development binary with dev version
 	@echo "Building $(BINARY_NAME) (development)"
-	go build -o $(BINARY_NAME) ./cmd/aiassist/
+	CGO_ENABLED=0 go build -o $(BINARY_NAME) ./cmd/aiassist/
 
 clean: ## Remove built binary
 	rm -f $(BINARY_NAME)
