@@ -27,6 +27,12 @@ func StartSpinner(message string) func() {
 		ticker := time.NewTicker(300 * time.Millisecond)
 		defer ticker.Stop()
 
+		// Ensure terminal cleanup even if goroutine panics
+		defer func() {
+			fmt.Fprintf(os.Stdout, "\r%s\r", strings.Repeat(" ", 100))
+			os.Stdout.Sync()
+		}()
+
 		for {
 			select {
 			case <-done:

@@ -1,0 +1,87 @@
+# AI Shell Assistant 配置示例
+
+# ============================================
+# 模式一：配置中心模式（推荐企业部署）
+# ============================================
+# 使用 Consul 集中管理配置
+# 优势：配置统一管理，实时同步到所有主机
+# 本地文件只需 Consul 连接信息
+
+# Consul 配置中心设置
+consul:
+  enabled: true                    # 启用 Consul
+  address: "127.0.0.1:8500"        # Consul 地址
+  key: "aiassist/config"           # 配置存储的 Key
+  token: ""                        # ACL Token（可选）
+
+# 注意：使用配置中心模式时
+# language、http_proxy、default_model、providers 全部从 Consul 加载
+# 本地文件不需要配置这些字段
+
+# ============================================
+# Consul 中的配置内容示例
+# ============================================
+# 在 Consul KV 中创建 key: aiassist/config
+# 内容如下：
+#
+# language: zh
+# http_proxy: ""
+# default_model: bailian/qwen-max
+# providers:
+#   bailian:
+#     name: bailian
+#     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+#     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
+#     enabled: true
+#     models:
+#       - name: qwen-max
+#         enabled: true
+#       - name: qwen-plus
+#         enabled: true
+
+# ============================================
+# 模式二：本地配置模式（个人使用）
+# ============================================
+# 直接在本地文件配置，无需额外服务
+# 优势：简单直接
+
+# language: zh
+# http_proxy: ""
+# default_model: bailian/qwen-max
+# 
+# # 不配置 consul 或设置 enabled: false
+# # consul:
+# #   enabled: false
+# 
+# # 直接配置 providers
+# providers:
+#   bailian:
+#     name: bailian
+#     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+#     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
+#     enabled: true
+#     models:
+#       - name: qwen-max
+#         enabled: true
+#       - name: qwen-plus
+#         enabled: true
+# 
+#   deepseek:
+#     name: deepseek
+#     base_url: https://api.deepseek.com/v1
+#     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
+#     enabled: true
+#     models:
+#       - name: deepseek-chat
+#         enabled: true
+# 
+#   openai:
+#     name: openai
+#     base_url: https://api.openai.com/v1
+#     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
+#     enabled: false
+#     models:
+#       - name: gpt-4
+#         enabled: true
+#       - name: gpt-3.5-turbo
+#         enabled: false

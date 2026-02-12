@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/fatih/color"
@@ -18,6 +19,31 @@ var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage configuration",
 	Long:  "Configure LLM providers, API keys, language preference, proxy and other parameters",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Skip Consul check for read-only commands
+		if cmd.Name() == "list" || cmd.Name() == "view" {
+			return nil
+		}
+
+		// Check if Consul mode is enabled for write operations
+		cfg := config.Get()
+		if cfg.Consul != nil && cfg.Consul.Enabled {
+			color.Red("\n✗ Configuration is managed by Consul\n")
+			color.Yellow("\nPlease modify configuration using one of these methods:\n\n")
+			color.Cyan("1. Consul UI:\n")
+			fmt.Printf("   Visit: http://%s/ui/dc1/kv/%s/edit\n\n", cfg.Consul.Address, cfg.Consul.Key)
+			color.Cyan("2. Consul CLI:\n")
+			fmt.Printf("   consul kv get %s > config.yaml\n", cfg.Consul.Key)
+			fmt.Printf("   # Edit config.yaml\n")
+			fmt.Printf("   consul kv put %s @config.yaml\n\n", cfg.Consul.Key)
+			color.Cyan("3. Consul API:\n")
+			fmt.Printf("   curl http://%s/v1/kv/%s?raw > config.yaml\n", cfg.Consul.Address, cfg.Consul.Key)
+			fmt.Printf("   # Edit config.yaml\n")
+			fmt.Printf("   curl -X PUT --data-binary @config.yaml http://%s/v1/kv/%s\n\n", cfg.Consul.Address, cfg.Consul.Key)
+			os.Exit(1) // Exit directly to avoid duplicate error message from Cobra
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If no subcommand provided, run interactive configuration wizard
 		if len(args) == 0 {
@@ -88,6 +114,37 @@ var configProviderDisableCmd = &cobra.Command{
 		}
 		disableProvider(args[0])
 	},
+}
+
+// readInput reads user input and handles both \r and \n line endings
+func readInput(reader *bufio.Reader) string {
+	var result []byte
+	for {
+		b, err := reader.ReadByte()
+		if err != nil {
+			break
+		}
+		// Stop at newline (\n) or carriage return (\r)
+		if b == '\n' || b == '\r' {
+			// Consume any following \r or \n characters without blocking
+			// Only try to read more if there's data already buffered
+			for reader.Buffered() > 0 {
+				next, err := reader.Peek(1)
+				if err != nil {
+					break
+				}
+				// If next char is a line ending, consume it
+				if next[0] == '\n' || next[0] == '\r' {
+					reader.ReadByte()
+				} else {
+					break
+				}
+			}
+			break
+		}
+		result = append(result, b)
+	}
+	return string(result)
 }
 
 var configModelCmd = &cobra.Command{
@@ -162,7 +219,30 @@ func init() {
 	configCmd.AddCommand(configViewCmd)
 }
 
+// ensureTerminalSane ensures the terminal is in a proper state for input
+// This fixes issues where liner or other tools have modified terminal settings
+func ensureTerminalSane() {
+	// Only run stty if stdin is a terminal
+	stat, err := os.Stdin.Stat()
+	if err != nil || (stat.Mode()&os.ModeCharDevice) == 0 {
+		return // Not a TTY, skip
+	}
+
+	// Use stty to restore terminal to sane state
+	if _, err := exec.LookPath("stty"); err == nil {
+		cmd := exec.Command("stty", "sane")
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		// Ignore errors - if stty fails, we'll just continue
+		_ = cmd.Run()
+	}
+}
+
 func addProviderInteractive() {
+	// Ensure terminal is in a sane state
+	ensureTerminalSane()
+
 	reader := bufio.NewReader(os.Stdin)
 
 	// Load config
@@ -177,7 +257,7 @@ func addProviderInteractive() {
 	var providerName string
 	for providerName == "" {
 		fmt.Print(translator.T("config.openai_compat.provider_name"))
-		name, _ := reader.ReadString('\n')
+		name := readInput(reader)
 		name = strings.TrimSpace(name)
 		if name == "" {
 			fmt.Println(translator.T("config.openai_compat.name_empty"))
@@ -197,7 +277,7 @@ func addProviderInteractive() {
 	var baseURL string
 	for baseURL == "" {
 		fmt.Print(translator.T("config.openai_compat.base_url"))
-		url, _ := reader.ReadString('\n')
+		url := readInput(reader)
 		url = strings.TrimSpace(url)
 		if url == "" {
 			fmt.Println(translator.T("config.openai_compat.url_empty"))
@@ -210,7 +290,7 @@ func addProviderInteractive() {
 	var apiKey string
 	for apiKey == "" {
 		fmt.Print(translator.T("config.openai_compat.api_key"))
-		key, _ := reader.ReadString('\n')
+		key := readInput(reader)
 		key = strings.TrimSpace(key)
 		if key == "" {
 			fmt.Println(translator.T("config.openai_compat.key_empty"))
@@ -223,7 +303,7 @@ func addProviderInteractive() {
 	var modelNames string
 	for modelNames == "" {
 		fmt.Print(translator.T("config.openai_compat.model_name"))
-		models, _ := reader.ReadString('\n')
+		models := readInput(reader)
 		models = strings.TrimSpace(models)
 		if models == "" {
 			fmt.Println(translator.T("config.openai_compat.model_empty"))
@@ -272,6 +352,9 @@ func addProviderInteractive() {
 }
 
 func deleteProviderInteractive() {
+	// Ensure terminal is in a sane state
+	ensureTerminalSane()
+
 	reader := bufio.NewReader(os.Stdin)
 
 	// Load config
@@ -295,7 +378,7 @@ func deleteProviderInteractive() {
 
 	// Ask user to select provider
 	fmt.Print("\nEnter provider number to delete (or press Enter to cancel): ")
-	input, _ := reader.ReadString('\n')
+	input := readInput(reader)
 	input = strings.TrimSpace(input)
 
 	if input == "" {
@@ -314,7 +397,7 @@ func deleteProviderInteractive() {
 
 	// Confirm deletion
 	fmt.Printf("\nAre you sure you want to delete '%s'? (yes/no): ", providerName)
-	confirm, _ := reader.ReadString('\n')
+	confirm := readInput(reader)
 	confirm = strings.TrimSpace(confirm)
 
 	if confirm != "yes" && confirm != "y" {
@@ -681,6 +764,10 @@ func viewConfig() {
 }
 
 func interactiveConfig() error {
+	// Ensure terminal is in a sane state before starting
+	// This is particularly important if liner or other tools have modified terminal settings
+	ensureTerminalSane()
+
 	reader := bufio.NewReader(os.Stdin)
 
 	// Prompt user to select language preference first
@@ -689,7 +776,9 @@ func interactiveConfig() error {
 
 	// Load or create config
 	cfg := config.Get()
-	cfg.SetLanguage(lang)
+	if err := cfg.SetLanguage(lang); err != nil {
+		return fmt.Errorf("failed to set language: %w", err)
+	}
 
 	fmt.Printf("\n%s\n", ui.Separator())
 	fmt.Println(translator.T("config.title"))
@@ -709,7 +798,7 @@ func interactiveConfig() error {
 		var providerName string
 		for providerName == "" {
 			fmt.Print(translator.T("config.openai_compat.provider_name"))
-			name, _ := reader.ReadString('\n')
+			name := readInput(reader)
 			name = strings.TrimSpace(name)
 			if name == "" {
 				fmt.Println(translator.T("config.openai_compat.name_empty"))
@@ -722,7 +811,7 @@ func interactiveConfig() error {
 		var baseURL string
 		for baseURL == "" {
 			fmt.Print(translator.T("config.openai_compat.base_url"))
-			url, _ := reader.ReadString('\n')
+			url := readInput(reader)
 			url = strings.TrimSpace(url)
 			if url == "" {
 				fmt.Println(translator.T("config.openai_compat.url_empty"))
@@ -735,7 +824,7 @@ func interactiveConfig() error {
 		var apiKey string
 		for apiKey == "" {
 			fmt.Print(translator.T("config.openai_compat.api_key"))
-			key, _ := reader.ReadString('\n')
+			key := readInput(reader)
 			key = strings.TrimSpace(key)
 			if key == "" {
 				fmt.Println(translator.T("config.openai_compat.key_empty"))
@@ -748,7 +837,7 @@ func interactiveConfig() error {
 		var modelNames string
 		for modelNames == "" {
 			fmt.Print(translator.T("config.openai_compat.model_name"))
-			models, _ := reader.ReadString('\n')
+			models := readInput(reader)
 			models = strings.TrimSpace(models)
 			if models == "" {
 				fmt.Println(translator.T("config.openai_compat.model_empty"))
@@ -785,12 +874,15 @@ func interactiveConfig() error {
 			Models:  modelConfigs,
 			Enabled: true,
 		}
-		cfg.AddProvider(providerName, providerCfg)
+		if err := cfg.AddProvider(providerName, providerCfg); err != nil {
+			color.Red(translator.T("config.error", err.Error()) + "\n")
+			return err
+		}
 		fmt.Printf("%s\n", translator.T("config.openai_compat.success", providerName))
 
 		// Ask if user wants to add more providers
 		fmt.Print("\n" + translator.T("config.openai_compat.add_more"))
-		input, _ := reader.ReadString('\n')
+		input := readInput(reader)
 		choice := strings.TrimSpace(input)
 		addMore = choice == "yes" || choice == "y"
 	}
@@ -823,7 +915,7 @@ func interactiveConfig() error {
 		}
 
 		fmt.Print("\n" + translator.T("config.default_model.select"))
-		input, _ := reader.ReadString('\n')
+		input := readInput(reader)
 		input = strings.TrimSpace(input)
 
 		// Default to first model if empty input
@@ -846,7 +938,7 @@ func interactiveConfig() error {
 	fmt.Println(translator.T("config.proxy.example"))
 	fmt.Print("\n" + translator.T("config.proxy.input"))
 
-	proxyInput, _ := reader.ReadString('\n')
+	proxyInput := readInput(reader)
 	proxyInput = strings.TrimSpace(proxyInput)
 
 	if proxyInput != "" {
@@ -895,7 +987,7 @@ func selectLanguage(reader *bufio.Reader) string {
 	fmt.Println("2. Chinese (\u4e2d\u6587)")
 	fmt.Print("\nPlease select (default: 1): ")
 
-	input, _ := reader.ReadString('\n')
+	input := readInput(reader)
 	choice := strings.TrimSpace(input)
 
 	if choice == "2" {

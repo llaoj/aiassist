@@ -31,11 +31,20 @@ type ProviderConfig struct {
 	Enabled bool           `yaml:"enabled"`
 }
 
+// ConsulConfig represents Consul configuration center settings
+type ConsulConfig struct {
+	Enabled bool   `yaml:"enabled"`         // Enable Consul config center
+	Address string `yaml:"address"`         // Consul address (e.g., "127.0.0.1:8500")
+	Key     string `yaml:"key"`             // KV key to store config (e.g., "aiassist/config")
+	Token   string `yaml:"token,omitempty"` // ACL token (optional)
+}
+
 // Config represents global configuration
 type Config struct {
 	Language     string                     `yaml:"language"`
 	HTTPProxy    string                     `yaml:"http_proxy"`
 	DefaultModel string                     `yaml:"default_model"`
+	Consul       *ConsulConfig              `yaml:"consul,omitempty"` // Consul config center settings
 	Providers    map[string]*ProviderConfig `yaml:"providers"`
 
 	ConfigDir  string       `yaml:"-"`
@@ -71,9 +80,28 @@ func Init() error {
 		ConfigFile:   configFile,
 	}
 
-	// Load config file if it exists
+	// Load local config file if it exists
 	if _, err := os.Stat(configFile); err == nil {
-		return globalConfig.Load()
+		if err := globalConfig.Load(); err != nil {
+			return err
+		}
+
+		// Check if Consul is configured and enabled
+		if globalConfig.Consul != nil && globalConfig.Consul.Enabled {
+			// Try to load from Consul
+			cfg, err := LoadFromConsul(globalConfig.Consul)
+			if err == nil {
+				// Successfully loaded from Consul, use those providers
+				globalConfig.Language = cfg.Language
+				globalConfig.HTTPProxy = cfg.HTTPProxy
+				globalConfig.DefaultModel = cfg.DefaultModel
+				globalConfig.Providers = cfg.Providers
+				return nil
+			}
+			// Consul load failed, continue using local providers
+		}
+
+		return nil
 	}
 
 	// Config file doesn't exist - return nil
@@ -115,7 +143,13 @@ func (c *Config) Save() error {
 }
 
 // save saves configuration to file (internal, caller must hold lock)
+// Note: Consul mode check is handled at cmd layer via PersistentPreRunE
 func (c *Config) save() error {
+	return c.saveToFile()
+}
+
+// saveToFile saves configuration to local file
+func (c *Config) saveToFile() error {
 	data, err := yaml.Marshal(c)
 	if err != nil {
 		return fmt.Errorf("failed to serialize config: %w", err)
@@ -237,8 +271,17 @@ func (c *Config) GetLanguage() string {
 	return c.Language
 }
 
-// ConfigExists checks if configuration file exists
+// ConfigExists checks if configuration exists (either in Consul or local file)
 func (c *Config) ConfigExists() bool {
+	// If using Consul mode, check if providers exist
+	if c.Consul != nil && c.Consul.Enabled {
+		c.mu.RLock()
+		hasProviders := len(c.Providers) > 0
+		c.mu.RUnlock()
+		return hasProviders
+	}
+
+	// Otherwise check local file
 	if c.ConfigFile == "" {
 		return false
 	}
