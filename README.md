@@ -175,9 +175,80 @@ aiassist --help
 
 ## 🔧 配置说明
 
+### 配置模式
+
+aiassist 支持两种配置模式：
+
+#### 🏢 配置中心模式（推荐企业部署）
+
+使用 **Consul** 集中管理配置，所有主机从配置中心实时加载配置。
+
+**优势：**
+- ✅ 配置统一管理，一处修改全局生效
+- ✅ 多主机配置同步，无需逐台配置
+- ✅ 配置版本化管理
+- ✅ 团队协作友好
+
+**配置步骤：**
+
+1. **启动 Consul**（可选，如已有 Consul 服务跳过）:
+   ```bash
+   # Docker 方式
+   docker run -d -p 8500:8500 --name=consul consul agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
+   ```
+
+2. **在 Consul KV 中创建配置**:
+   ```bash
+   # 访问 Consul UI: http://localhost:8500
+   # 创建 Key: aiassist/config
+   # 内容:
+   language: zh
+   http_proxy: ""
+   default_model: bailian/qwen-max
+   providers:
+     bailian:
+       name: bailian
+       base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+       api_key: sk-xxxxxxxxxxxx
+       enabled: true
+       models:
+         - name: qwen-max
+           enabled: true
+   ```
+
+3. **配置本地文件** (`~/.aiassist/config.yaml`):
+   ```yaml
+   # 只需配置 Consul 连接信息
+   consul:
+     enabled: true
+     address: "127.0.0.1:8500"
+     key: "aiassist/config"
+     token: ""  # ACL Token（可选）
+   
+   # language、providers 等全部从 Consul 加载，无需在本地配置
+   ```
+
+**注意事项：**
+- ⚠️ 配置中心模式下，`aiassist config` 命令只读，不允许修改配置
+- 💡 所有配置变更需在 Consul KV 中进行
+- 🔄 配置修改后立即生效，无需重启
+
+#### 💻 本地配置模式（个人使用）
+
+直接在本地文件 `~/.aiassist/config.yaml` 配置，简单直接。
+
+**优势：**
+- ✅ 无需额外服务
+- ✅ 配置简单直观
+- ✅ 适合个人使用
+
+配置示例见下方"配置文件"章节。
+
+---
+
 ### 配置文件
 
-配置文件位于 `~/.aiassist/config.yaml`：
+本地配置模式下，配置文件位于 `~/.aiassist/config.yaml`：
 
 ```yaml
 language: zh  # zh=中文, en=English

@@ -116,7 +116,94 @@ journalctl -u nginx -n 100 | aiassist "Find the cause of errors"
 4. Offers executable remediation commands
 
 ## �🔧 Configuration
+### Configuration Modes
 
+aiassist supports two configuration modes:
+
+#### 🏢 Configuration Center Mode (Recommended for Enterprise)
+
+Use **Consul** for centralized configuration management, with all hosts loading config from the center in real-time.
+
+**Advantages:**
+- ✅ Unified configuration management, one change applies globally
+- ✅ Multi-host configuration sync, no need to configure each host
+- ✅ Configuration version control
+- ✅ Team collaboration friendly
+
+**Setup Steps:**
+
+1. **Start Consul** (Optional, skip if you already have Consul):
+   ```bash
+   # Docker way
+   docker run -d -p 8500:8500 --name=consul consul agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
+   ```
+
+2. **Create configuration in Consul KV**:
+   ```bash
+   # Access Consul UI: http://localhost:8500
+   # Create Key: aiassist/config
+   # Content:
+   language: en
+   http_proxy: ""
+   default_model: bailian/qwen-max
+   providers:
+     bailian:
+       name: bailian
+       base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+       api_key: sk-xxxxxxxxxxxx
+       enabled: true
+       models:
+         - name: qwen-max
+           enabled: true
+   ```
+
+3. **Configure local file** (`~/.aiassist/config.yaml`):
+   ```yaml
+   # Only Consul connection info needed
+   consul:
+     enabled: true
+     address: "127.0.0.1:8500"
+     key: "aiassist/config"
+     token: ""  # ACL Token (optional)
+   
+   # language, providers, etc. are all loaded from Consul
+   ```
+
+**Notes:**
+- ⚠️ In configuration center mode, `aiassist config` command is read-only
+- 💡 All configuration changes must be done in Consul KV
+- 🔄 Configuration changes take effect immediately without restart
+
+#### 💻 Local Configuration Mode (Personal Use)
+
+Configure directly in local file `~/.aiassist/config.yaml`, simple and straightforward.
+
+**Advantages:**
+- ✅ No additional services required
+- ✅ Simple and intuitive configuration
+- ✅ Perfect for personal use
+
+Configuration example:
+
+```yaml
+language: en
+http_proxy: ""
+default_model: bailian/qwen-max
+
+providers:
+  bailian:
+    name: bailian
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key: sk-xxxxxxxxxxxx
+    enabled: true
+    models:
+      - name: qwen-max
+        enabled: true
+      - name: qwen-plus
+        enabled: true
+```
+
+---
 ### API Key Information
 
 Each LLM Provider requires an API Key for access. API Keys are credentials for accessing model services - please keep them secure.
