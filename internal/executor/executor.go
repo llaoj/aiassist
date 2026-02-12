@@ -2,7 +2,6 @@ package executor
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -107,14 +106,4 @@ func (ce *CommandExecutor) ExtractCommands(response string) []Command {
 	}
 
 	return commands
-}
-
-// RunCommand executes command with direct terminal output
-func (ce *CommandExecutor) RunCommand(command string) error {
-	cmd := exec.Command("sh", "-c", command)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	return cmd.Run()
 }
