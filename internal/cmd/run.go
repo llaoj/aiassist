@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -60,7 +61,12 @@ func initializeSession() (*interactive.Session, *i18n.I18n) {
 func runInteractiveMode(initialQuestion string) {
 	session, translator := initializeSession()
 
-	if err := session.Run(initialQuestion); err != nil {
+	err := session.Run(initialQuestion)
+	if err != nil {
+		// Check if it's a user exit (normal termination)
+		if errors.Is(err, interactive.ErrUserExit) {
+			return // Normal exit, no error message
+		}
 		color.Red(translator.T("error.general", err) + "\n")
 		os.Exit(1)
 	}
@@ -70,7 +76,12 @@ func runInteractiveMode(initialQuestion string) {
 func runPipeMode(initialQuestion string) {
 	session, translator := initializeSession()
 
-	if err := session.RunWithPipe(initialQuestion); err != nil {
+	err := session.RunWithPipe(initialQuestion)
+	if err != nil {
+		// Check if it's a user exit (normal termination)
+		if errors.Is(err, interactive.ErrUserExit) {
+			return // Normal exit, no error message
+		}
 		color.Red(translator.T("error.general", err) + "\n")
 		os.Exit(1)
 	}

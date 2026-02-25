@@ -2,19 +2,27 @@ package interactive
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/llaoj/aiassist/internal/config"
 	"github.com/llaoj/aiassist/internal/executor"
 	"github.com/llaoj/aiassist/internal/i18n"
 	"github.com/llaoj/aiassist/internal/llm"
 	"github.com/llaoj/aiassist/internal/prompt"
 	"github.com/llaoj/aiassist/internal/sysinfo"
 	"github.com/llaoj/aiassist/internal/ui"
-	"github.com/peterh/liner"
+)
+
+// Common errors
+var (
+	ErrUserAbort = ui.ErrUserAbort
+	ErrUserExit  = ui.ErrUserExit
 )
 
 // SessionMessage represents a message in the session
@@ -29,7 +37,7 @@ type Session struct {
 	executor          *executor.CommandExecutor
 	history           []SessionMessage
 	translator        *i18n.I18n
-	line              *liner.State
+	commandHistory    *ui.History
 	recursionDepth    int // Current recursion depth for command handling
 	maxRecursionDepth int // Maximum allowed recursion depth
 }
@@ -58,14 +66,15 @@ func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
 		})
 	}
 
-	// Initialize liner for interactive input (only for normal mode)
-	stdinStat, _ := os.Stdin.Stat()
-	isPipe := (stdinStat.Mode() & os.ModeCharDevice) == 0
+	// Initialize command history
+	cfg := config.Get()
+	historyFile := filepath.Join(cfg.ConfigDir, "history")
+	session.commandHistory = ui.NewHistory(historyFile, 1000)
 
-	if !isPipe {
-		// Create liner only for normal interactive mode
-		session.line = liner.NewLiner()
-		session.line.SetCtrlCAborts(true)
+	// Load command history
+	if err := session.commandHistory.Load(); err != nil {
+		// Non-fatal error, just log it
+		color.Yellow("Warning: failed to load command history: %v\n", err)
 	}
 
 	return session
@@ -73,11 +82,15 @@ func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
 
 // Run starts the interactive session
 // If initialQuestion is provided, it will be processed and ask if user wants to continue
-func (s *Session) Run(initialQuestion string) error {
-	// Ensure liner is properly closed on exit (only if not nil)
+func (s *Session) Run(initialQuestion string) (err error) {
+	// Add panic recovery to ensure terminal is restored
 	defer func() {
-		if s.line != nil {
-			s.line.Close()
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic recovered: %v", r)
+		}
+		// Save command history on exit
+		if saveErr := s.commandHistory.Save(); saveErr != nil {
+			color.Yellow("Warning: failed to save command history: %v\n", saveErr)
 		}
 	}()
 
@@ -103,88 +116,63 @@ func (s *Session) Run(initialQuestion string) error {
 	return s.runInteractiveLoop()
 }
 
-// readUserInput reads input from terminal using liner
+// readUserInput reads input from terminal using huh
 func (s *Session) readUserInput(prompt string) (string, error) {
-	if s.line == nil {
-		return "", fmt.Errorf("liner not initialized")
-	}
+	// Get history suggestions
+	suggestions := s.commandHistory.GetRecent(50)
 
-	// Flush any pending output before reading
-	os.Stdout.Sync()
-
-	// Read line with liner (supports Chinese, editing, cursor movement)
-	line, err := s.line.Prompt(prompt)
+	input, err := ui.PromptInputWithHistory(prompt, suggestions)
 	if err != nil {
-		// Handle Ctrl+C - exit gracefully
-		if err == liner.ErrPromptAborted {
-			color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
-			os.Exit(0)
+		if errors.Is(err, ui.ErrUserAbort) {
+			// User pressed Ctrl+C
+			return "", ErrUserAbort
 		}
 		return "", err
 	}
 
-	return strings.TrimSpace(line), nil
+	// Add to command history if not empty
+	if strings.TrimSpace(input) != "" {
+		if err := s.commandHistory.Append(input); err != nil {
+			// Non-fatal error, just log it
+			color.Yellow("Warning: failed to append to command history: %v\n", err)
+		}
+	}
+
+	return input, nil
 }
 
 // confirmCommandExecution asks user to confirm command execution
-func (s *Session) confirmCommandExecution(cmdType executor.CommandType) bool {
+func (s *Session) confirmCommandExecution(cmdType executor.CommandType) (bool, error) {
 	// First confirmation
-	if !s.askConfirmation(s.translator.T("executor.execute_prompt")) {
-		return false
+	confirmed, err := s.askConfirmation(s.translator.T("executor.execute_prompt"))
+	if err != nil || !confirmed {
+		return false, err
 	}
 
 	// Second confirmation for modify commands
 	if cmdType == executor.ModifyCommand {
 		fmt.Println()
-		if !s.askConfirmation(s.translator.T("executor.modify_warning")) {
-			return false
+		confirmed, err = s.askConfirmation(s.translator.T("executor.modify_warning"))
+		if err != nil || !confirmed {
+			return false, err
 		}
 	}
 
-	return true
+	return true, nil
 }
 
 // askConfirmation prompts user for yes/no confirmation
-// Only accepts: y, n, exit (+ Enter), or Ctrl+C
-func (s *Session) askConfirmation(prompt string) bool {
-	for {
-		// Use liner with the prompt directly so it handles cursor properly
-		line, err := s.line.Prompt(prompt)
-		if err != nil {
-			if err == liner.ErrPromptAborted {
-				// Ctrl+C pressed
-				color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
-				os.Exit(0)
-			}
-			if err == io.EOF {
-				color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
-				os.Exit(0)
-			}
-			color.Red(s.translator.T("executor.read_input_failed", err) + "\n")
-			return false
+func (s *Session) askConfirmation(prompt string) (bool, error) {
+	confirmed, err := ui.PromptConfirm(prompt)
+	if err != nil {
+		if errors.Is(err, ui.ErrUserAbort) {
+			// User pressed Ctrl+C
+			return false, ErrUserAbort
 		}
-
-		input := strings.TrimSpace(line)
-		input = strings.ToLower(input)
-
-		// Handle valid inputs
-		if input == "exit" {
-			color.Yellow(s.translator.T("executor.exiting") + "\n")
-			os.Exit(0)
-		}
-
-		if input == "y" || input == "yes" {
-			return true
-		}
-
-		if input == "n" || input == "no" {
-			color.Yellow(s.translator.T("executor.cancelled") + "\n")
-			return false
-		}
-
-		// Invalid input - show error and re-prompt
-		color.Red(s.translator.T("executor.invalid_input") + "\n")
+		return false, err
 	}
+
+	return confirmed, nil
 }
 
 // buildConversationContext builds conversation context from history
@@ -221,7 +209,7 @@ func (s *Session) processQuestion(userInput string) error {
 
 	commands := s.executor.ExtractCommands(response)
 	if len(commands) > 0 {
-		s.handleCommands(commands)
+		return s.handleCommands(commands)
 	}
 
 	return nil
@@ -307,12 +295,16 @@ func (s *Session) runInteractiveLoop() error {
 		prompt := s.translator.T("interactive.input_prompt")
 		userInput, err := s.readUserInput(prompt)
 		if err != nil {
+			if errors.Is(err, ErrUserAbort) {
+				// User pressed Ctrl+C
+				color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
+				return ErrUserExit
+			}
 			if err == io.EOF {
 				// EOF (Ctrl+D)
 				color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
-				return nil
+				return ErrUserExit
 			}
-			// Note: Ctrl+C (liner.ErrPromptAborted) is handled in readUserInput
 			color.Red("Error: %v\n", err)
 			continue
 		}
@@ -326,7 +318,7 @@ func (s *Session) runInteractiveLoop() error {
 		switch strings.ToLower(userInput) {
 		case "exit":
 			color.Cyan(s.translator.T("interactive.goodbye") + "\n")
-			return nil
+			return ErrUserExit
 		case "help":
 			s.printHelp()
 			continue
@@ -337,6 +329,9 @@ func (s *Session) runInteractiveLoop() error {
 
 		// Process the question
 		if err := s.processQuestion(userInput); err != nil {
+			if errors.Is(err, ErrUserAbort) || errors.Is(err, ErrUserExit) {
+				return err
+			}
 			color.Red("Error: %v\n", err)
 			continue
 		}
@@ -344,15 +339,15 @@ func (s *Session) runInteractiveLoop() error {
 }
 
 // handleCommands processes extracted commands
-func (s *Session) handleCommands(commands []executor.Command) {
+func (s *Session) handleCommands(commands []executor.Command) error {
 	if len(commands) == 0 {
-		return
+		return nil
 	}
 
 	// Check recursion depth to prevent stack overflow
 	if s.recursionDepth >= s.maxRecursionDepth {
 		color.Yellow(s.translator.T("executor.max_depth_reached") + "\n")
-		return
+		return nil
 	}
 	s.recursionDepth++
 	defer func() { s.recursionDepth-- }()
@@ -368,7 +363,11 @@ func (s *Session) handleCommands(commands []executor.Command) {
 		s.executor.DisplayCommand(cmd.Text, cmd.Type, s.translator)
 
 		// Get user confirmation
-		if !s.confirmCommandExecution(cmd.Type) {
+		confirmed, err := s.confirmCommandExecution(cmd.Type)
+		if err != nil {
+			return err
+		}
+		if !confirmed {
 			continue
 		}
 
@@ -397,9 +396,7 @@ func (s *Session) handleCommands(commands []executor.Command) {
 			firstExecutedCmd = cmd.Text
 			firstExecutedOutput = output
 			// After executing the first command, analyze output and continue
-			s.analyzeCommandOutput(firstExecutedCmd, firstExecutedOutput)
-			// After analysis, we return to allow the next step's commands to be handled
-			return
+			return s.analyzeCommandOutput(firstExecutedCmd, firstExecutedOutput)
 		}
 	}
 
@@ -407,8 +404,10 @@ func (s *Session) handleCommands(commands []executor.Command) {
 	if !executedAny {
 		// color.Yellow(s.translator.T("interactive.all_commands_skipped") + "\n")
 		color.Green(s.translator.T("interactive.analysis_complete") + "\n")
-		return
+		return nil
 	}
+
+	return nil
 }
 
 // truncateOutput intelligently truncates command output to fit within model limits
@@ -431,7 +430,7 @@ func (s *Session) truncateOutput(output string, maxChars int) string {
 }
 
 // analyzeCommandOutput analyzes command output and continues investigation
-func (s *Session) analyzeCommandOutput(cmd, output string) {
+func (s *Session) analyzeCommandOutput(cmd, output string) error {
 	// Truncate output if too long (~100k chars)
 	const maxOutputChars = 100000
 	truncatedOutput := s.truncateOutput(output, maxOutputChars)
@@ -453,7 +452,7 @@ func (s *Session) analyzeCommandOutput(cmd, output string) {
 
 	if err != nil {
 		color.Red("Error: %v\n", err)
-		return
+		return err
 	}
 
 	s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
@@ -462,16 +461,20 @@ func (s *Session) analyzeCommandOutput(cmd, output string) {
 	// Handle new commands or ask to continue
 	newCommands := s.executor.ExtractCommands(response)
 	if len(newCommands) > 0 {
-		s.handleCommands(newCommands)
-	} else {
-		// Ask if user wants to continue
-		if s.askConfirmation(s.translator.T("interactive.all_steps_complete")) {
-			return // Continue to main loop
-		}
-		// User chose 'n', exit program
-		color.Cyan(s.translator.T("interactive.goodbye") + "\n")
-		os.Exit(0)
+		return s.handleCommands(newCommands)
 	}
+
+	// Ask if user wants to continue
+	confirmed, err := s.askConfirmation(s.translator.T("interactive.all_steps_complete"))
+	if err != nil {
+		return err
+	}
+	if confirmed {
+		return nil // Continue to main loop
+	}
+	// User chose 'n', exit program
+	color.Cyan(s.translator.T("interactive.goodbye") + "\n")
+	return ErrUserExit
 }
 
 // printHelp displays help information

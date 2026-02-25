@@ -67,7 +67,6 @@ func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt
 		return "", "", fmt.Errorf("no available LLM providers")
 	}
 
-	var lastErr error
 	for _, providerName := range available {
 		provider := m.providers[providerName]
 
@@ -90,15 +89,14 @@ func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt
 		}
 
 		if err != nil {
-			lastErr = err
-			fmt.Printf("[Warning] %s call failed, trying next model: %v\n", providerName, err)
+			fmt.Printf("Error: %s call failed: %v\n", providerName, err)
 			continue
 		}
 
 		return response, providerName, nil
 	}
 
-	return "", "", fmt.Errorf("all model calls failed: %w", lastErr)
+	return "", "", fmt.Errorf("all model calls failed")
 }
 
 // CallSpecific calls a specific model
