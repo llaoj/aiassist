@@ -4,8 +4,8 @@ package i18n
 var ChineseMessages = map[string]string{
 	// Config messages
 	"config.not_found":      "✗ 配置文件不存在",
-	"config.hint_run_setup": "请运行: aiassist config",
-	"config.title":          "AI Shell Assistant - 配置向导",
+	"config.hint_run_setup": "请编辑配置文件: ~/.aiassist/config.yaml",
+	"config.title":          "AI Shell Assistant - 配置查看",
 
 	// OpenAI-compatible configuration
 	"config.openai_compat.title":         "配置 OpenAI 兼容的大模型提供商",
@@ -80,7 +80,7 @@ var ChineseMessages = map[string]string{
 
 	// Error messages
 	"error.no_models":      "✗ 错误: 未配置任何模型",
-	"error.hint_no_models": "请先运行: aiassist config",
+	"error.hint_no_models": "请先编辑配置文件: ~/.aiassist/config.yaml",
 	"error.unknown_model":  "!!! 警告: 未知模型 %s",
 
 	// Version messages

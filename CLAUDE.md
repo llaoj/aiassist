@@ -53,7 +53,7 @@ go test -v ./internal/config
   1. **Local mode**: YAML file at `~/.aiassist/config.yaml`
   2. **Consul mode**: Centralized config from Consul KV store
 - When `consul.enabled=true`, all provider/model config comes from Consul
-- Local mode: config modified via file editing or interactive wizard (`aiassist config`)
+- Local mode: config modified via direct file editing
 - Consul mode: read-only from CLI, modified via Consul UI/API/CLI
 - Thread-safe with mutex protection for concurrent access
 

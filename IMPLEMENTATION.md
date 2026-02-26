@@ -63,16 +63,13 @@ aiassist/
 - 使用 Cobra 框架实现命令行
 - 基本命令：
   - `aiassist` - 进入交互模式
-  - `aiassist config` - 配置管理
+  - `aiassist config view` - 查看配置
   - `aiassist version` - 显示版本
 
 ## 使用流程
 
-### 1. 初始化配置
-```bash
-aiassist config
-```
-按提示完成模型选择、API Key 配置、语言偏好设置。
+### 1. 配置
+直接编辑配置文件 `~/.aiassist/config.yaml`，配置 Provider 和 API Key。
 
 ### 2. 直接交互模式
 ```bash

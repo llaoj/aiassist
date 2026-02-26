@@ -494,16 +494,22 @@ sudo mv aiassist /usr/local/bin/
 
 ### 配置模型
 
-```bash
-aiassist config
-```
+直接编辑配置文件 `~/.aiassist/config.yaml`，配置 LLM Provider。
 
-按向导提示配置：
-1. 选择语言（中文/English）
-2. 添加 LLM Provider（任何 OpenAI 兼容接口）
-3. 输入 API Key
-4. 配置模型列表
-5. （可选）设置 HTTP 代理
+**配置示例：**
+```yaml
+language: zh
+default_model: bailian/qwen-max
+providers:
+  bailian:
+    name: bailian
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key: sk-xxxxxxxxxxxx
+    enabled: true
+    models:
+      - name: qwen-max
+        enabled: true
+```
 
 **支持所有 OpenAI 兼容接口**，包括：
 - OpenAI (GPT-4, GPT-3.5)

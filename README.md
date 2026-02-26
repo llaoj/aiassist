@@ -54,18 +54,7 @@ curl -fsSL https://raw.githubusercontent.com/llaoj/aiassist/main/scripts/install
 
 ### 首次配置
 
-首次使用需要配置 LLM Provider：
-
-```bash
-aiassist config
-```
-
-交互式向导将引导你完成：
-1. 选择语言（中文/English）
-2. 添加 LLM Provider（支持 OpenAI 兼容接口）
-3. 配置 API Key
-4. 设置模型列表
-5. （可选）配置 HTTP 代理
+首次使用需要配置 LLM Provider。直接编辑配置文件 `~/.aiassist/config.yaml`，参考下方"配置说明"部分。
 
 ### 交互式模式
 
@@ -143,17 +132,12 @@ journalctl -u nginx -n 100 | aiassist "找出错误原因"
 # 查看版本
 aiassist version
 
-# 配置向导
-aiassist config
-
 # 查看当前配置
 aiassist config view
 
 # 查看帮助
 aiassist --help
 ```
-
-> **注意**：配置管理通过直接编辑配置文件 `~/.aiassist/config.yaml` 来完成。运行 `aiassist config` 会启动交互式配置向导，帮助您完成初始配置。
 
 ## 🔧 配置说明
 

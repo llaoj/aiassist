@@ -4,8 +4,8 @@ package i18n
 var EnglishMessages = map[string]string{
 	// Config messages
 	"config.not_found":      "✗ Configuration file not found",
-	"config.hint_run_setup": "Please run: aiassist config",
-	"config.title":          "AI Shell Assistant - Configuration Wizard",
+	"config.hint_run_setup": "Please edit config file: ~/.aiassist/config.yaml",
+	"config.title":          "AI Shell Assistant - Configuration View",
 
 	// OpenAI-compatible configuration
 	"config.openai_compat.title":         "Configure OpenAI-Compatible LLM Providers",
@@ -76,7 +76,7 @@ var EnglishMessages = map[string]string{
 	"output.truncated": "omitted %d lines of output",
 	// Error messages
 	"error.no_models":      "✗ Error: No models configured",
-	"error.hint_no_models": "Please run first: aiassist config",
+	"error.hint_no_models": "Please edit config file first: ~/.aiassist/config.yaml",
 	"error.unknown_model":  "!!! Warning: Unknown model %s",
 
 	// Version messages

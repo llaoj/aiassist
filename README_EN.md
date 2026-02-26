@@ -47,17 +47,12 @@ For detailed installation instructions, see [INSTALL.md](INSTALL.md)
 # View version
 aiassist version
 
-# Configuration wizard
-aiassist config
-
 # View current configuration
 aiassist config view
 
 # View help
 aiassist --help
 ```
-
-> **Note**: Configuration is managed by directly editing the config file `~/.aiassist/config.yaml`. Running `aiassist config` starts an interactive configuration wizard to help you complete the initial setup.
 
 ## � Usage Modes
 
