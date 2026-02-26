@@ -44,16 +44,8 @@ var EnglishMessages = map[string]string{
 
 	// Interactive mode messages
 	"interactive.welcome":              "Welcome to AI Shell Assistant",
-	"interactive.help_hint":            "Type 'exit' or 'quit' to exit, 'help' for help",
 	"interactive.input_prompt":         "Please enter your question: ",
 	"interactive.goodbye":              "Goodbye!",
-	"interactive.help_title":           "Help:",
-	"interactive.help_command":         "  help        - Display this help message",
-	"interactive.help_exit":            "  exit/quit   - Exit interactive session",
-	"interactive.help_examples":        "Usage Examples:",
-	"interactive.help_ex1":             "  Why is the server load high?",
-	"interactive.help_ex2":             "  How to analyze Nginx logs?",
-	"interactive.help_ex3":             "  How to find the process with the highest CPU usage?",
 	"interactive.commands_found":       "Found suggested commands:",
 	"interactive.cancelled":            "Cancelled",
 	"interactive.thinking":             "Thinking",

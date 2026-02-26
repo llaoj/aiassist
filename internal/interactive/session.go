@@ -79,7 +79,6 @@ func (s *Session) Run(initialQuestion string) (err error) {
 	// Display welcome message
 	color.Cyan(ui.Separator() + "\n")
 	color.Cyan(s.translator.T("interactive.welcome") + "\n")
-	color.Cyan(s.translator.T("interactive.help_hint") + "\n")
 	color.Cyan(ui.Separator() + "\n")
 
 	// Print current model status
@@ -294,16 +293,6 @@ func (s *Session) runInteractiveLoop() error {
 		// Print user input after it's entered (bubbletea clears the input prompt)
 		fmt.Println(userInput)
 
-		// Handle special commands
-		switch strings.ToLower(userInput) {
-		case "exit":
-			color.Cyan(s.translator.T("interactive.goodbye") + "\n")
-			return ErrUserExit
-		case "help":
-			s.printHelp()
-			continue
-		}
-
 		// Process the question
 		if err := s.processQuestion(userInput); err != nil {
 			if errors.Is(err, ErrUserAbort) || errors.Is(err, ErrUserExit) {
@@ -460,16 +449,4 @@ func (s *Session) analyzeCommandOutput(cmd, output string) error {
 	// User chose 'n', exit program
 	color.Cyan(s.translator.T("interactive.goodbye") + "\n")
 	return ErrUserExit
-}
-
-// printHelp displays help information
-func (s *Session) printHelp() {
-	fmt.Println("\n" + s.translator.T("interactive.help_title"))
-	fmt.Println(s.translator.T("interactive.help_command"))
-	fmt.Println(s.translator.T("interactive.help_exit"))
-	fmt.Println("\n" + s.translator.T("interactive.help_examples"))
-	fmt.Println(s.translator.T("interactive.help_ex1"))
-	fmt.Println(s.translator.T("interactive.help_ex2"))
-	fmt.Println(s.translator.T("interactive.help_ex3"))
-	fmt.Println()
 }

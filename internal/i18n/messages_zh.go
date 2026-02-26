@@ -44,16 +44,8 @@ var ChineseMessages = map[string]string{
 
 	// Interactive mode messages
 	"interactive.welcome":              "欢迎使用 AI Shell Assistant",
-	"interactive.help_hint":            "输入 'exit' 退出，'help' 查看帮助",
 	"interactive.input_prompt":         "请输入问题: ",
 	"interactive.goodbye":              "再见！",
-	"interactive.help_title":           "帮助:",
-	"interactive.help_command":         "  help        - 显示此帮助信息",
-	"interactive.help_exit":            "  exit        - 退出交互会话",
-	"interactive.help_examples":        "使用示例:",
-	"interactive.help_ex1":             "  为什么服务器负载很高?",
-	"interactive.help_ex2":             "  如何分析 Nginx 日志?",
-	"interactive.help_ex3":             "  如何查找占用 CPU 最高的进程?",
 	"interactive.commands_found":       "发现以下建议命令:",
 	"interactive.cancelled":            "已取消",
 	"interactive.thinking":             "思考中",

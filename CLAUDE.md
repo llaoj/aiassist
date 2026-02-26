@@ -185,6 +185,45 @@ The `-s -w` flags strip debug information for smaller binaries. `CGO_ENABLED=0` 
 - Go version: 1.21+
 - Main dependencies: Cobra (CLI), fatih/color (terminal colors), peterh/liner (line editor), hashicorp/consul/api (config center)
 
+## Documentation Synchronization
+
+**CRITICAL**: Code and documentation must always stay in sync.
+
+### Synchronization Rules
+
+1. **When modifying code logic**:
+   - Check if the modified logic is documented in `docs/` or README files
+   - Update all relevant documentation to reflect the changes
+   - Ensure examples, flow descriptions, and behavior descriptions match the new code
+
+2. **When removing code logic**:
+   - Search for and remove all documentation references to the removed feature
+   - Remove related examples, usage instructions, and descriptions
+   - Clean up any screenshots, diagrams, or references that mention the removed logic
+
+3. **When adding new features**:
+   - Document the new feature in relevant documentation files
+   - Add usage examples and behavior descriptions
+   - Update architecture diagrams if needed
+
+### Documentation Files to Check
+
+When making changes, search these locations for documentation that may need updates:
+- `docs/ARTICLE.md` - Main article with examples and use cases
+- `README.md` - Project overview and quick start
+- `CLAUDE.md` - This file (architecture and implementation details)
+- Code comments and godoc strings
+
+### Verification Checklist
+
+Before completing any code change:
+- [ ] Searched documentation files for references to modified/removed logic
+- [ ] Updated all found references with new behavior
+- [ ] Removed documentation for deleted features
+- [ ] Added documentation for new features
+- [ ] Examples still work as documented
+- [ ] Screenshots/diagrams are still accurate
+
 ## Internationalization (i18n) Guidelines
 
 **CRITICAL**: All user-facing messages must support both Chinese and English.
