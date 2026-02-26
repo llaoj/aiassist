@@ -76,16 +76,14 @@ var ChineseMessages = map[string]string{
 	"executor.query_command":        "查询命令:",
 	"executor.modify_command":       "修改命令 (需要确认):",
 	"executor.unclassified_command": "未分类命令:",
-	"executor.execute_prompt":       "是否执行此命令? (y/n, exit退出): ",
-	"executor.modify_warning":       "警告: 该命令将修改服务器配置，是否确定执行? (y/n, exit退出): ",
+	"executor.execute_prompt":       "是否执行此命令?",
+	"executor.modify_warning":       "警告: 该命令将修改服务器配置，是否确定执行?",
 	"executor.executing":            "执行中",
 	"executor.execute_success":      "✓ 执行成功",
 	"executor.execute_failed":       "✗ 执行失败: %v",
 	"executor.no_output":            "(命令执行成功，但没有输出)",
 	"executor.cancelled":            "已取消",
-	"executor.exiting":              "退出中...",
 	"executor.read_input_failed":    "读取输入失败: %v",
-	"executor.invalid_input":        "无效输入。请输入: y, n, 或 exit",
 	"executor.max_depth_reached":    "警告: 已达到最大命令分析深度。停止以防止无限递归。",
 
 	// Output truncation messages
@@ -108,4 +106,8 @@ var ChineseMessages = map[string]string{
 	"llm.status_unavailable": "✗ 不可用",
 	"llm.remaining_calls":    "剩余额度",
 	"llm.priority":           "优先级",
+
+	// UI messages
+	"ui.ctrlc_exit_hint":      "再按一次 Ctrl+C 退出程序",
+	"ui.ctrlc_exit_message":   "用户通过 Ctrl+C 退出，再见！",
 }

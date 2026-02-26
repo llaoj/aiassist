@@ -124,11 +124,11 @@ func (s *Session) readUserInput(prompt string) (string, error) {
 	// Get history suggestions
 	suggestions := s.commandHistory.GetRecent(50)
 
-	input, err := ui.PromptInputWithHistory(prompt, suggestions)
+	input, err := ui.PromptInputWithHistory(prompt, suggestions, s.translator)
 	if err != nil {
 		if errors.Is(err, ui.ErrUserAbort) {
-			// User pressed Ctrl+C
-			return "", ErrUserAbort
+			// User pressed Ctrl+C - return error to trigger exit
+			return "", err
 		}
 		return "", err
 	}
@@ -166,11 +166,11 @@ func (s *Session) confirmCommandExecution(cmdType executor.CommandType) (bool, e
 
 // askConfirmation prompts user for yes/no confirmation
 func (s *Session) askConfirmation(prompt string) (bool, error) {
-	confirmed, err := ui.PromptConfirm(prompt)
+	confirmed, err := ui.PromptConfirm(prompt, s.translator)
 	if err != nil {
 		if errors.Is(err, ui.ErrUserAbort) {
-			// User pressed Ctrl+C
-			return false, ErrUserAbort
+			// User pressed Ctrl+C - return error to trigger exit
+			return false, err
 		}
 		return false, err
 	}
@@ -300,7 +300,7 @@ func (s *Session) runInteractiveLoop() error {
 		if err != nil {
 			if errors.Is(err, ErrUserAbort) {
 				// User pressed Ctrl+C
-				color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
+				color.Cyan("\n" + s.translator.T("ui.ctrlc_exit_message") + "\n")
 				return ErrUserExit
 			}
 			if err == io.EOF {
@@ -332,6 +332,7 @@ func (s *Session) runInteractiveLoop() error {
 
 		// Print question so it stays visible after huh clears the input field
 		color.Yellow("[%s]: %s\n", s.translator.T("interactive.user_label"), userInput)
+		fmt.Println()
 
 		// Process the question
 		if err := s.processQuestion(userInput); err != nil {

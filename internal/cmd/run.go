@@ -63,9 +63,10 @@ func runInteractiveMode(initialQuestion string) {
 
 	err := session.Run(initialQuestion)
 	if err != nil {
-		// Check if it's a user exit (normal termination)
-		if errors.Is(err, interactive.ErrUserExit) {
-			return // Normal exit, no error message
+		// Check if it's a user exit or abort (normal termination)
+		if errors.Is(err, interactive.ErrUserExit) || errors.Is(err, interactive.ErrUserAbort) {
+			color.Cyan("\n" + translator.T("ui.ctrlc_exit_message") + "\n")
+			return // Normal exit
 		}
 		color.Red(translator.T("error.general", err) + "\n")
 		os.Exit(1)
@@ -78,9 +79,10 @@ func runPipeMode(initialQuestion string) {
 
 	err := session.RunWithPipe(initialQuestion)
 	if err != nil {
-		// Check if it's a user exit (normal termination)
-		if errors.Is(err, interactive.ErrUserExit) {
-			return // Normal exit, no error message
+		// Check if it's a user exit or abort (normal termination)
+		if errors.Is(err, interactive.ErrUserExit) || errors.Is(err, interactive.ErrUserAbort) {
+			color.Cyan("\n" + translator.T("ui.ctrlc_exit_message") + "\n")
+			return // Normal exit
 		}
 		color.Red(translator.T("error.general", err) + "\n")
 		os.Exit(1)

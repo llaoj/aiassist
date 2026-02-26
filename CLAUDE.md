@@ -184,3 +184,51 @@ The `-s -w` flags strip debug information for smaller binaries. `CGO_ENABLED=0` 
 - System info cache: `~/.aiassist/sysinfo.json`
 - Go version: 1.21+
 - Main dependencies: Cobra (CLI), fatih/color (terminal colors), peterh/liner (line editor), hashicorp/consul/api (config center)
+
+## Internationalization (i18n) Guidelines
+
+**CRITICAL**: All user-facing messages must support both Chinese and English.
+
+### Implementation Rules
+
+1. **Never hardcode user-facing strings** in the codebase
+2. **Always use the i18n system** for all messages displayed to users
+3. **Add translations to both** `internal/i18n/messages_zh.go` and `internal/i18n/messages_en.go`
+4. **Use consistent message keys** across both language files
+
+### How to Add New Messages
+
+When adding a new user-facing message:
+
+1. Add the message key to both language files:
+   ```go
+   // messages_zh.go
+   "ui.ctrlc_exit_hint": "再按一次 Ctrl+C 退出程序",
+
+   // messages_en.go
+   "ui.ctrlc_exit_hint": "Press Ctrl+C again to exit",
+   ```
+
+2. Use the translator in your code:
+   ```go
+   translator := i18n.New(language)
+   message := translator.T("ui.ctrlc_exit_hint")
+   fmt.Println(message)
+   ```
+
+### Message Categories
+
+Organize message keys by category using dot notation:
+- `config.*` - Configuration related messages
+- `interactive.*` - Interactive session messages
+- `executor.*` - Command execution messages
+- `error.*` - Error messages
+- `ui.*` - UI component messages
+- `llm.*` - LLM related messages
+
+### Where to Find i18n Implementation
+
+- **i18n package**: `internal/i18n/`
+- **Chinese messages**: `internal/i18n/messages_zh.go`
+- **English messages**: `internal/i18n/messages_en.go`
+- **Translator initialization**: Via `i18n.New()` in each command handler

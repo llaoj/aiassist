@@ -74,16 +74,14 @@ var EnglishMessages = map[string]string{
 	"executor.query_command":        "Query command:",
 	"executor.modify_command":       "Modify command (requires confirmation):",
 	"executor.unclassified_command": "Unclassified command:",
-	"executor.execute_prompt":       "Execute this command? (y/n, exit to quit): ",
-	"executor.modify_warning":       "Warning: This command will modify server configuration, are you sure? (y/n, exit to quit): ",
+	"executor.execute_prompt":       "Execute this command?",
+	"executor.modify_warning":       "Warning: This command will modify server configuration, are you sure?",
 	"executor.executing":            "Executing",
 	"executor.execute_success":      "✓ Execution successful",
 	"executor.execute_failed":       "✗ Execution failed: %v",
 	"executor.no_output":            "(Command executed successfully, but no output)",
 	"executor.cancelled":            "Cancelled",
-	"executor.exiting":              "Exiting...",
 	"executor.read_input_failed":    "Failed to read input: %v",
-	"executor.invalid_input":        "Invalid input. Please enter: y, n, or exit",
 	"executor.max_depth_reached":    "Warning: Maximum command analysis depth reached. Stopping to prevent infinite recursion.",
 	// Output truncation messages
 	"output.truncated": "omitted %d lines of output",
@@ -104,4 +102,8 @@ var EnglishMessages = map[string]string{
 	"llm.status_unavailable": "✗ Unavailable",
 	"llm.remaining_calls":    "Remaining Calls",
 	"llm.priority":           "Priority",
+
+	// UI messages
+	"ui.ctrlc_exit_hint":      "Press Ctrl+C again to exit",
+	"ui.ctrlc_exit_message":   "User exited via Ctrl+C, goodbye!",
 }

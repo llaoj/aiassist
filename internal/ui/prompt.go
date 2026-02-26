@@ -4,23 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/llaoj/aiassist/internal/i18n"
 )
 
 // Common errors
 var (
 	ErrUserAbort = errors.New("user aborted")
 	ErrUserExit  = errors.New("user exit")
-)
-
-// Track Ctrl+C presses for double-press to exit
-var (
-	ctrlCCount   int
-	ctrlCMutex   sync.Mutex
-	ctrlCMessage = "Press Ctrl+C again to exit"
 )
 
 // getInputTheme returns a minimal theme without the left vertical bar and indentation
@@ -43,17 +36,18 @@ func getSelectTheme() *huh.Theme {
 
 
 // PromptInput displays an input prompt and returns the user's input
-func PromptInput(prompt string) (string, error) {
+func PromptInput(prompt string, translator *i18n.I18n) (string, error) {
 	var input string
 
-	err := huh.NewInput().
+	form := huh.NewInput().
 		Title(prompt).
 		Value(&input).
-		WithTheme(getInputTheme()).
-		Run()
+		WithTheme(getInputTheme())
+
+	// Use RunAccessible to prevent redraw issues on terminal resize
+	err := form.RunAccessible(os.Stdout, os.Stdin)
 
 	if err != nil {
-		// Check if user pressed Ctrl+C or Ctrl+D
 		if errors.Is(err, huh.ErrUserAborted) {
 			return "", ErrUserAbort
 		}
@@ -64,7 +58,7 @@ func PromptInput(prompt string) (string, error) {
 }
 
 // PromptInputWithHistory displays an input prompt with history support
-func PromptInputWithHistory(prompt string, suggestions []string) (string, error) {
+func PromptInputWithHistory(prompt string, suggestions []string, translator *i18n.I18n) (string, error) {
 	var input string
 
 	// Create input field with title and value
@@ -72,13 +66,13 @@ func PromptInputWithHistory(prompt string, suggestions []string) (string, error)
 		Title(prompt).
 		Value(&input)
 
-	// Add suggestions if provided (must be called before WithKeyMap)
+	// Add suggestions if provided
 	if len(suggestions) > 0 {
 		inputField = inputField.Suggestions(suggestions)
 	}
 
-	// Apply theme (must be last)
-	err := inputField.WithTheme(getInputTheme()).Run()
+	// Apply theme and use RunAccessible to prevent redraw issues
+	err := inputField.WithTheme(getInputTheme()).RunAccessible(os.Stdout, os.Stdin)
 
 	if err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
@@ -91,49 +85,33 @@ func PromptInputWithHistory(prompt string, suggestions []string) (string, error)
 }
 
 // PromptConfirm displays a confirmation prompt and returns the result
-func PromptConfirm(prompt string) (bool, error) {
+func PromptConfirm(prompt string, translator *i18n.I18n) (bool, error) {
 	var selected string
 
-	for {
-		err := huh.NewSelect[string]().
-			Title(prompt).
-			Options(
-				huh.NewOption("Yes", "yes"),
-				huh.NewOption("No", "no"),
-			).
-			Value(&selected).
-			WithTheme(getSelectTheme()).
-			Run()
+	form := huh.NewSelect[string]().
+		Title(prompt).
+		Options(
+			huh.NewOption("Yes", "yes"),
+			huh.NewOption("No", "no"),
+		).
+		Value(&selected).
+		WithTheme(getSelectTheme())
 
-		if err != nil {
-			if errors.Is(err, huh.ErrUserAborted) {
-				// Check if this is the second Ctrl+C press
-				ctrlCMutex.Lock()
-				ctrlCCount++
-				if ctrlCCount >= 2 {
-					ctrlCCount = 0
-					ctrlCMutex.Unlock()
-					return false, ErrUserAbort
-				}
-				// First Ctrl+C - show message and continue
-				fmt.Println("\n" + ctrlCMessage)
-				ctrlCMutex.Unlock()
-				continue
-			}
-			return false, fmt.Errorf("confirmation error: %w", err)
+	// Use RunAccessible to prevent redraw issues on terminal resize
+	err := form.RunAccessible(os.Stdout, os.Stdin)
+
+	if err != nil {
+		if errors.Is(err, huh.ErrUserAborted) {
+			return false, ErrUserAbort
 		}
-
-		// Reset counter on successful selection
-		ctrlCMutex.Lock()
-		ctrlCCount = 0
-		ctrlCMutex.Unlock()
-
-		return selected == "yes", nil
+		return false, fmt.Errorf("confirmation error: %w", err)
 	}
+
+	return selected == "yes", nil
 }
 
 // PromptConfirmWithDefault displays a confirmation prompt with a default value
-func PromptConfirmWithDefault(prompt string, defaultValue bool) (bool, error) {
+func PromptConfirmWithDefault(prompt string, defaultValue bool, translator *i18n.I18n) (bool, error) {
 	var selected string
 
 	defaultOption := "no"
@@ -141,44 +119,28 @@ func PromptConfirmWithDefault(prompt string, defaultValue bool) (bool, error) {
 		defaultOption = "yes"
 	}
 
-	for {
-		err := huh.NewSelect[string]().
-			Title(prompt).
-			Options(
-				huh.NewOption("Yes", "yes"),
-				huh.NewOption("No", "no"),
-			).
-			Value(&selected).
-			WithTheme(getSelectTheme()).
-			Run()
+	form := huh.NewSelect[string]().
+		Title(prompt).
+		Options(
+			huh.NewOption("Yes", "yes"),
+			huh.NewOption("No", "no"),
+		).
+		Value(&selected).
+		WithTheme(getSelectTheme())
 
-		if err != nil {
-			if errors.Is(err, huh.ErrUserAborted) {
-				// Check if this is the second Ctrl+C press
-				ctrlCMutex.Lock()
-				ctrlCCount++
-				if ctrlCCount >= 2 {
-					ctrlCCount = 0
-					ctrlCMutex.Unlock()
-					return false, ErrUserAbort
-				}
-				// First Ctrl+C - show message and continue
-				fmt.Println("\n" + ctrlCMessage)
-				ctrlCMutex.Unlock()
-				continue
-			}
-			return false, fmt.Errorf("confirmation error: %w", err)
+	// Use RunAccessible to prevent redraw issues on terminal resize
+	err := form.RunAccessible(os.Stdout, os.Stdin)
+
+	if err != nil {
+		if errors.Is(err, huh.ErrUserAborted) {
+			return false, ErrUserAbort
 		}
-
-		// Reset counter on successful selection
-		ctrlCMutex.Lock()
-		ctrlCCount = 0
-		ctrlCMutex.Unlock()
-
-		_ = defaultOption // Avoid unused variable warning
-
-		return selected == "yes", nil
+		return false, fmt.Errorf("confirmation error: %w", err)
 	}
+
+	_ = defaultOption // Avoid unused variable warning
+
+	return selected == "yes", nil
 }
 
 // PromptSelect displays a selection list and returns the selected option
@@ -191,11 +153,13 @@ func PromptSelect(prompt string, options []string) (string, error) {
 		huhOptions[i] = huh.NewOption(opt, opt)
 	}
 
-	err := huh.NewSelect[string]().
+	form := huh.NewSelect[string]().
 		Title(prompt).
 		Options(huhOptions...).
-		Value(&selected).
-		Run()
+		Value(&selected)
+
+	// Use RunAccessible to prevent redraw issues on terminal resize
+	err := form.RunAccessible(os.Stdout, os.Stdin)
 
 	if err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
@@ -217,11 +181,13 @@ func PromptMultiSelect(prompt string, options []string) ([]string, error) {
 		huhOptions[i] = huh.NewOption(opt, opt)
 	}
 
-	err := huh.NewMultiSelect[string]().
+	form := huh.NewMultiSelect[string]().
 		Title(prompt).
 		Options(huhOptions...).
-		Value(&selected).
-		Run()
+		Value(&selected)
+
+	// Use RunAccessible to prevent redraw issues on terminal resize
+	err := form.RunAccessible(os.Stdout, os.Stdin)
 
 	if err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
@@ -237,10 +203,12 @@ func PromptMultiSelect(prompt string, options []string) ([]string, error) {
 func PromptText(prompt string) (string, error) {
 	var text string
 
-	err := huh.NewText().
+	form := huh.NewText().
 		Title(prompt).
-		Value(&text).
-		Run()
+		Value(&text)
+
+	// Use RunAccessible to prevent redraw issues on terminal resize
+	err := form.RunAccessible(os.Stdout, os.Stdin)
 
 	if err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
