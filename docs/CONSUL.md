@@ -267,8 +267,8 @@ providers:
 **示例：**
 
 ```bash
-# 配置中心模式下尝试添加 provider
-$ aiassist config provider add
+# 配置中心模式下尝试运行配置向导
+$ aiassist config
 Error: configuration is managed by Consul, please modify in Consul UI or KV store
 
 # 正确做法：在 Consul UI 中修改或使用命令

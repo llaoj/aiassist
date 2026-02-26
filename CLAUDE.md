@@ -44,7 +44,7 @@ go test -v ./internal/config
 
 **CLI Layer**: `internal/cmd/`
 - `root.go`: Main command handling interactive and pipe modes
-- `config.go`: Configuration management commands (provider/model management)
+- `config.go`: Interactive configuration wizard and configuration viewer
 - `run.go`: Implements interactive and pipe mode execution flows
 - `version.go`: Version information command
 
@@ -53,7 +53,8 @@ go test -v ./internal/config
   1. **Local mode**: YAML file at `~/.aiassist/config.yaml`
   2. **Consul mode**: Centralized config from Consul KV store
 - When `consul.enabled=true`, all provider/model config comes from Consul
-- Local mode allows modifications via CLI; Consul mode is read-only
+- Local mode: config modified via file editing or interactive wizard (`aiassist config`)
+- Consul mode: read-only from CLI, modified via Consul UI/API/CLI
 - Thread-safe with mutex protection for concurrent access
 
 **LLM Manager**: `internal/llm/`

@@ -50,32 +50,14 @@ aiassist version
 # Configuration wizard
 aiassist config
 
-# Add Provider
-aiassist config provider add
-
-# List all Providers
-aiassist config provider list
-
-# Enable/Disable Provider
-aiassist config provider enable <name>
-aiassist config provider disable <name>
-
-# Delete Provider
-aiassist config provider delete <name>
-
-# Enable/Disable model
-aiassist config model enable <provider/model-name>
-aiassist config model disable <provider/model-name>
-
-# Set default model
-aiassist config model default <provider/model-name>
-
 # View current configuration
 aiassist config view
 
 # View help
 aiassist --help
 ```
+
+> **Note**: Configuration is managed by directly editing the config file `~/.aiassist/config.yaml`. Running `aiassist config` starts an interactive configuration wizard to help you complete the initial setup.
 
 ## � Usage Modes
 
@@ -217,8 +199,8 @@ When a model returns HTTP 429 status code, it indicates the API call limit has b
 
 **Recommendations:**
 - Configure multiple Providers or models for fallback
-- Check model status regularly: `aiassist config provider list`
 - If a model remains unavailable, check your API Key's quota and billing status
+- Run `aiassist config view` to check current configuration and model status
 
 **💡 About Paid Models:**
 

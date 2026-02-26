@@ -10,22 +10,16 @@ import (
 	"github.com/fatih/color"
 	"github.com/llaoj/aiassist/internal/config"
 	"github.com/llaoj/aiassist/internal/i18n"
-	"github.com/llaoj/aiassist/internal/llm"
 	"github.com/llaoj/aiassist/internal/ui"
 	"github.com/spf13/cobra"
 )
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Manage configuration",
-	Long:  "Configure LLM providers, API keys, language preference, proxy and other parameters",
+	Short: "Run interactive configuration wizard",
+	Long:  "Run an interactive wizard to configure LLM providers, API keys, language preference, and proxy settings",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Skip Consul check for read-only commands
-		if cmd.Name() == "list" || cmd.Name() == "view" {
-			return nil
-		}
-
-		// Check if Consul mode is enabled for write operations
+		// Check if Consul mode is enabled
 		cfg := config.Get()
 		if cfg.Consul != nil && cfg.Consul.Enabled {
 			color.Red("\n✗ Configuration is managed by Consul\n")
@@ -45,75 +39,42 @@ var configCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// If no subcommand provided, run interactive configuration wizard
-		if len(args) == 0 {
-			return interactiveConfig()
-		}
-		return nil
+		return interactiveConfig()
 	},
 }
 
-var configProviderCmd = &cobra.Command{
-	Use:   "provider",
-	Short: "Manage LLM providers",
-	Long:  "Add, delete, enable, disable, or list LLM providers",
-}
-
-var configProviderAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "Add a new LLM provider",
-	Long:  "Add a new LLM provider with base URL, API Key, and model names",
+var configViewCmd = &cobra.Command{
+	Use:   "view",
+	Short: "View current configuration",
+	Long:  "Display current configuration details including language, proxy, default model and all providers",
 	Run: func(cmd *cobra.Command, args []string) {
-		addProviderInteractive()
+		viewConfig()
 	},
 }
 
-var configProviderDeleteCmd = &cobra.Command{
-	Use:   "delete [provider-name]",
-	Short: "Delete an LLM provider",
-	Long:  "Delete an LLM provider from the configuration",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) > 0 {
-			deleteProviderByName(args[0])
-		} else {
-			deleteProviderInteractive()
-		}
-	},
+func init() {
+	rootCmd.AddCommand(configCmd)
+	configCmd.AddCommand(configViewCmd)
 }
 
-var configProviderListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all LLM providers",
-	Long:  "List all configured LLM providers",
-	Run: func(cmd *cobra.Command, args []string) {
-		listProviders()
-	},
-}
+// ensureTerminalSane ensures the terminal is in a proper state for input
+// This fixes issues where liner or other tools have modified terminal settings
+func ensureTerminalSane() {
+	// Only run stty if stdin is a terminal
+	stat, err := os.Stdin.Stat()
+	if err != nil || (stat.Mode()&os.ModeCharDevice) == 0 {
+		return // Not a TTY, skip
+	}
 
-var configProviderEnableCmd = &cobra.Command{
-	Use:   "enable [provider-name]",
-	Short: "Enable an LLM provider",
-	Long:  "Enable a disabled LLM provider",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			color.Red("Please specify provider name\n")
-			return
-		}
-		enableProvider(args[0])
-	},
-}
-
-var configProviderDisableCmd = &cobra.Command{
-	Use:   "disable [provider-name]",
-	Short: "Disable an LLM provider",
-	Long:  "Disable an LLM provider without deleting it",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			color.Red("Please specify provider name\n")
-			return
-		}
-		disableProvider(args[0])
-	},
+	// Use stty to restore terminal to sane state
+	if _, err := exec.LookPath("stty"); err == nil {
+		cmd := exec.Command("stty", "sane")
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		// Ignore errors - if stty fails, we'll just continue
+		_ = cmd.Run()
+	}
 }
 
 // readInput reads user input and handles both \r and \n line endings
@@ -145,551 +106,6 @@ func readInput(reader *bufio.Reader) string {
 		result = append(result, b)
 	}
 	return string(result)
-}
-
-var configModelCmd = &cobra.Command{
-	Use:   "model",
-	Short: "Manage LLM models",
-	Long:  "Enable, disable, or set default model",
-}
-
-var configModelEnableCmd = &cobra.Command{
-	Use:   "enable <provider/model-name>",
-	Short: "Enable a model",
-	Long:  "Enable a specific model (format: provider/model-name)",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			color.Red("Please specify model in format: provider/model-name\n")
-			return
-		}
-		enableModel(args[0])
-	},
-}
-
-var configModelDisableCmd = &cobra.Command{
-	Use:   "disable <provider/model-name>",
-	Short: "Disable a model",
-	Long:  "Disable a specific model (format: provider/model-name)",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			color.Red("Please specify model in format: provider/model-name\n")
-			return
-		}
-		disableModel(args[0])
-	},
-}
-
-var configModelDefaultCmd = &cobra.Command{
-	Use:   "default <provider/model-name>",
-	Short: "Set default model",
-	Long:  "Set a model as the default (format: provider/model-name)",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			color.Red("Please specify model in format: provider/model-name\n")
-			return
-		}
-		setDefaultModel(args[0])
-	},
-}
-
-var configViewCmd = &cobra.Command{
-	Use:   "view",
-	Short: "View current configuration",
-	Long:  "Display current configuration details including language, proxy, default model and all providers",
-	Run: func(cmd *cobra.Command, args []string) {
-		viewConfig()
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(configCmd)
-
-	configCmd.AddCommand(configProviderCmd)
-	configProviderCmd.AddCommand(configProviderAddCmd)
-	configProviderCmd.AddCommand(configProviderDeleteCmd)
-	configProviderCmd.AddCommand(configProviderListCmd)
-	configProviderCmd.AddCommand(configProviderEnableCmd)
-	configProviderCmd.AddCommand(configProviderDisableCmd)
-
-	configCmd.AddCommand(configModelCmd)
-	configModelCmd.AddCommand(configModelEnableCmd)
-	configModelCmd.AddCommand(configModelDisableCmd)
-	configModelCmd.AddCommand(configModelDefaultCmd)
-
-	configCmd.AddCommand(configViewCmd)
-}
-
-// ensureTerminalSane ensures the terminal is in a proper state for input
-// This fixes issues where liner or other tools have modified terminal settings
-func ensureTerminalSane() {
-	// Only run stty if stdin is a terminal
-	stat, err := os.Stdin.Stat()
-	if err != nil || (stat.Mode()&os.ModeCharDevice) == 0 {
-		return // Not a TTY, skip
-	}
-
-	// Use stty to restore terminal to sane state
-	if _, err := exec.LookPath("stty"); err == nil {
-		cmd := exec.Command("stty", "sane")
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		// Ignore errors - if stty fails, we'll just continue
-		_ = cmd.Run()
-	}
-}
-
-func addProviderInteractive() {
-	// Ensure terminal is in a sane state
-	ensureTerminalSane()
-
-	reader := bufio.NewReader(os.Stdin)
-
-	// Load config
-	cfg := config.Get()
-	translator := i18n.New(cfg.GetLanguage())
-
-	fmt.Printf("\n%s\n", ui.Separator())
-	fmt.Println(translator.T("config.openai_compat.title"))
-	fmt.Printf("%s\n\n", ui.Separator())
-
-	// Get provider name
-	var providerName string
-	for providerName == "" {
-		fmt.Print(translator.T("config.openai_compat.provider_name"))
-		name := readInput(reader)
-		name = strings.TrimSpace(name)
-		if name == "" {
-			fmt.Println(translator.T("config.openai_compat.name_empty"))
-			continue
-		}
-
-		// Check if provider already exists
-		if cfg.GetProvider(name) != nil {
-			color.Red(fmt.Sprintf("Provider '%s' already exists\n", name))
-			continue
-		}
-
-		providerName = name
-	}
-
-	// Get base URL
-	var baseURL string
-	for baseURL == "" {
-		fmt.Print(translator.T("config.openai_compat.base_url"))
-		url := readInput(reader)
-		url = strings.TrimSpace(url)
-		if url == "" {
-			fmt.Println(translator.T("config.openai_compat.url_empty"))
-			continue
-		}
-		baseURL = url
-	}
-
-	// Get API Key
-	var apiKey string
-	for apiKey == "" {
-		fmt.Print(translator.T("config.openai_compat.api_key"))
-		key := readInput(reader)
-		key = strings.TrimSpace(key)
-		if key == "" {
-			fmt.Println(translator.T("config.openai_compat.key_empty"))
-			continue
-		}
-		apiKey = key
-	}
-
-	// Get model names (comma-separated)
-	var modelNames string
-	for modelNames == "" {
-		fmt.Print(translator.T("config.openai_compat.model_name"))
-		models := readInput(reader)
-		models = strings.TrimSpace(models)
-		if models == "" {
-			fmt.Println(translator.T("config.openai_compat.model_empty"))
-			continue
-		}
-		modelNames = models
-	}
-
-	// Parse comma-separated model names and deduplicate
-	modelList := make([]string, 0)
-	seenModels := make(map[string]bool)
-	for _, m := range strings.Split(modelNames, ",") {
-		m = strings.TrimSpace(m)
-		if m != "" && !seenModels[m] {
-			modelList = append(modelList, m)
-			seenModels[m] = true
-		}
-	}
-
-	// Convert string list to ModelConfig list
-	modelConfigs := make([]*config.ModelConfig, len(modelList))
-	for i, modelName := range modelList {
-		modelConfigs[i] = &config.ModelConfig{
-			Name:    modelName,
-			Enabled: true,
-		}
-	}
-
-	// Add provider configuration
-	providerCfg := &config.ProviderConfig{
-		Name:    providerName,
-		BaseURL: baseURL,
-		APIKey:  apiKey,
-		Models:  modelConfigs,
-		Enabled: true,
-	}
-
-	if err := cfg.AddProvider(providerName, providerCfg); err != nil {
-		color.Red(fmt.Sprintf("Failed to add provider: %v\n", err))
-		return
-	}
-
-	color.Green(translator.T("config.openai_compat.added", providerName) + "\n")
-	fmt.Printf("%s\n", translator.T("config.openai_compat.models_list", modelList))
-	color.Yellow("\n" + translator.T("config.openai_compat.order_hint") + "\n\n")
-}
-
-func deleteProviderInteractive() {
-	// Ensure terminal is in a sane state
-	ensureTerminalSane()
-
-	reader := bufio.NewReader(os.Stdin)
-
-	// Load config
-	cfg := config.Get()
-
-	allProviders := cfg.GetEnabledProviders()
-	if len(allProviders) == 0 {
-		color.Yellow("⚠ No providers configured\n")
-		return
-	}
-
-	// List providers
-	fmt.Printf("\n%s\n", ui.Separator())
-	fmt.Println("Available Providers:")
-	fmt.Printf("%s\n\n", ui.Separator())
-
-	for i, p := range allProviders {
-		fmt.Printf("%d. %s\n", i+1, p.Name)
-		fmt.Printf("   Models: %v\n", p.Models)
-	}
-
-	// Ask user to select provider
-	fmt.Print("\nEnter provider number to delete (or press Enter to cancel): ")
-	input := readInput(reader)
-	input = strings.TrimSpace(input)
-
-	if input == "" {
-		fmt.Println("Cancelled")
-		return
-	}
-
-	var idx int
-	_, err := fmt.Sscanf(input, "%d", &idx)
-	if err != nil || idx < 1 || idx > len(allProviders) {
-		color.Red("Invalid selection\n")
-		return
-	}
-
-	providerName := allProviders[idx-1].Name
-
-	// Confirm deletion
-	fmt.Printf("\nAre you sure you want to delete '%s'? (yes/no): ", providerName)
-	confirm := readInput(reader)
-	confirm = strings.TrimSpace(confirm)
-
-	if confirm != "yes" && confirm != "y" {
-		fmt.Println("Cancelled")
-		return
-	}
-
-	deleteProviderByName(providerName)
-}
-
-func deleteProviderByName(providerName string) {
-	cfg := config.Get()
-
-	if err := cfg.DeleteProvider(providerName); err != nil {
-		color.Red(fmt.Sprintf("Failed to delete provider: %v\n", err))
-		return
-	}
-
-	color.Green(fmt.Sprintf("✓ Provider '%s' deleted successfully\n", providerName))
-}
-
-func listProviders() {
-	cfg := config.Get()
-
-	allProviders := cfg.GetAllProviders()
-	if len(allProviders) == 0 {
-		color.Yellow("⚠ No providers configured\n")
-		return
-	}
-
-	// Create LLM manager to check model availability
-	manager := llm.NewManager(cfg)
-
-	// Register all providers/models to get their status
-	modelStatusMap := make(map[string]map[string]interface{})
-	seenModels := make(map[string]bool)
-
-	for _, provider := range allProviders {
-		for _, modelCfg := range provider.Models {
-			if !modelCfg.Enabled {
-				continue
-			}
-
-			modelKey := fmt.Sprintf("%s/%s", provider.Name, modelCfg.Name)
-
-			// Skip duplicate models
-			if seenModels[modelKey] {
-				continue
-			}
-			seenModels[modelKey] = true
-
-			// Create provider instance to check status
-			p := llm.NewOpenAICompatibleProvider(
-				modelKey,
-				provider.BaseURL,
-				provider.APIKey,
-				modelCfg.Name,
-			)
-			manager.RegisterProvider(modelKey, p)
-		}
-	}
-
-	// Get status for all registered models
-	modelStatusMap = manager.GetStatus()
-
-	fmt.Printf("\n%s\n", ui.Separator())
-	fmt.Println("Configured Providers:")
-	fmt.Printf("%s\n\n", ui.Separator())
-
-	for i, p := range allProviders {
-		status := "✓ Enabled"
-		if !p.Enabled {
-			status = "✗ Disabled"
-		}
-		fmt.Printf("%d. %s [%s]\n", i+1, p.Name, status)
-		fmt.Printf("   Base URL: %s\n", p.BaseURL)
-
-		// Display models with their status (deduplicated)
-		fmt.Printf("   Models:\n")
-		displayedModels := make(map[string]bool)
-
-		for _, modelCfg := range p.Models {
-			modelKey := fmt.Sprintf("%s/%s", p.Name, modelCfg.Name)
-
-			// Skip duplicates
-			if displayedModels[modelKey] {
-				continue
-			}
-			displayedModels[modelKey] = true
-
-			// Get model status
-			modelStatus := "✓ Enabled"
-			if !modelCfg.Enabled {
-				modelStatus = "✗ Disabled"
-			} else if statusInfo, exists := modelStatusMap[modelKey]; exists {
-				if available, ok := statusInfo["available"].(bool); ok && !available {
-					modelStatus = "✗ Unavailable"
-				}
-			}
-
-			fmt.Printf("     - %s [%s]\n", modelKey, modelStatus)
-		}
-		fmt.Println()
-	}
-}
-
-func enableProvider(providerName string) {
-	cfg := config.Get()
-	provider := cfg.GetProvider(providerName)
-
-	if provider == nil {
-		color.Red(fmt.Sprintf("Provider '%s' not found\n", providerName))
-		return
-	}
-
-	if provider.Enabled {
-		color.Yellow(fmt.Sprintf("⚠ Provider '%s' is already enabled\n", providerName))
-		return
-	}
-
-	provider.Enabled = true
-	if err := cfg.AddProvider(providerName, provider); err != nil {
-		color.Red(fmt.Sprintf("Failed to enable provider: %v\n", err))
-		return
-	}
-
-	color.Green(fmt.Sprintf("✓ Provider '%s' enabled successfully\n", providerName))
-}
-
-func disableProvider(providerName string) {
-	cfg := config.Get()
-	provider := cfg.GetProvider(providerName)
-
-	if provider == nil {
-		color.Red(fmt.Sprintf("Provider '%s' not found\n", providerName))
-		return
-	}
-
-	if !provider.Enabled {
-		color.Yellow(fmt.Sprintf("⚠ Provider '%s' is already disabled\n", providerName))
-		return
-	}
-
-	provider.Enabled = false
-	if err := cfg.AddProvider(providerName, provider); err != nil {
-		color.Red(fmt.Sprintf("Failed to disable provider: %v\n", err))
-		return
-	}
-
-	color.Green(fmt.Sprintf("✓ Provider '%s' disabled successfully\n", providerName))
-}
-
-func enableModel(modelKey string) {
-	// Parse provider/model-name
-	parts := strings.SplitN(modelKey, "/", 2)
-	if len(parts) != 2 {
-		color.Red("Invalid format. Please use: provider/model-name\n")
-		return
-	}
-
-	providerName := parts[0]
-	modelName := parts[1]
-
-	cfg := config.Get()
-	provider := cfg.GetProvider(providerName)
-
-	if provider == nil {
-		color.Red(fmt.Sprintf("Provider '%s' not found\n", providerName))
-		return
-	}
-
-	// Find and enable the model
-	found := false
-	for _, model := range provider.Models {
-		if model.Name == modelName {
-			if model.Enabled {
-				color.Yellow(fmt.Sprintf("Model '%s' is already enabled\n", modelKey))
-				return
-			}
-			model.Enabled = true
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		color.Red(fmt.Sprintf("Model '%s' not found in provider '%s'\n", modelName, providerName))
-		return
-	}
-
-	if err := cfg.AddProvider(providerName, provider); err != nil {
-		color.Red(fmt.Sprintf("Failed to enable model: %v\n", err))
-		return
-	}
-
-	color.Green(fmt.Sprintf("✓ Model '%s' enabled successfully\n", modelKey))
-}
-
-func disableModel(modelKey string) {
-	// Parse provider/model-name
-	parts := strings.SplitN(modelKey, "/", 2)
-	if len(parts) != 2 {
-		color.Red("Invalid format. Please use: provider/model-name\n")
-		return
-	}
-
-	providerName := parts[0]
-	modelName := parts[1]
-
-	cfg := config.Get()
-	provider := cfg.GetProvider(providerName)
-
-	if provider == nil {
-		color.Red(fmt.Sprintf("Provider '%s' not found\n", providerName))
-		return
-	}
-
-	// Find and disable the model
-	found := false
-	for _, model := range provider.Models {
-		if model.Name == modelName {
-			if !model.Enabled {
-				color.Yellow(fmt.Sprintf("Model '%s' is already disabled\n", modelKey))
-				return
-			}
-			model.Enabled = false
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		color.Red(fmt.Sprintf("Model '%s' not found in provider '%s'\n", modelName, providerName))
-		return
-	}
-
-	if err := cfg.AddProvider(providerName, provider); err != nil {
-		color.Red(fmt.Sprintf("Failed to disable model: %v\n", err))
-		return
-	}
-
-	color.Green(fmt.Sprintf("✓ Model '%s' disabled successfully\n", modelKey))
-}
-
-func setDefaultModel(modelKey string) {
-	// Parse provider/model-name
-	parts := strings.SplitN(modelKey, "/", 2)
-	if len(parts) != 2 {
-		color.Red("Invalid format. Please use: provider/model-name\n")
-		return
-	}
-
-	providerName := parts[0]
-	modelName := parts[1]
-
-	cfg := config.Get()
-	provider := cfg.GetProvider(providerName)
-
-	if provider == nil {
-		color.Red(fmt.Sprintf("Provider '%s' not found\n", providerName))
-		return
-	}
-
-	// Check if model exists and is enabled
-	found := false
-	enabled := false
-	for _, model := range provider.Models {
-		if model.Name == modelName {
-			found = true
-			enabled = model.Enabled
-			break
-		}
-	}
-
-	if !found {
-		color.Red(fmt.Sprintf("Model '%s' not found in provider '%s'\n", modelName, providerName))
-		return
-	}
-
-	if !enabled {
-		color.Red(fmt.Sprintf("Model '%s' is disabled. Please enable it first.\n", modelKey))
-		return
-	}
-
-	// Set as default
-	cfg.DefaultModel = modelKey
-	if err := cfg.Save(); err != nil {
-		color.Red(fmt.Sprintf("Failed to set default model: %v\n", err))
-		return
-	}
-
-	color.Green(fmt.Sprintf("✓ Default model set to '%s'\n", modelKey))
 }
 
 func viewConfig() {
@@ -967,15 +383,6 @@ func interactiveConfig() error {
 	fmt.Printf("%s\n\n", ui.Separator())
 
 	return nil
-}
-
-// getModelNames extracts model names from ModelConfig list
-func getModelNames(models []*config.ModelConfig) []string {
-	names := make([]string, len(models))
-	for i, m := range models {
-		names[i] = m.Name
-	}
-	return names
 }
 
 // selectLanguage prompts user to select language preference

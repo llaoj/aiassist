@@ -146,32 +146,14 @@ aiassist version
 # 配置向导
 aiassist config
 
-# 添加 Provider
-aiassist config provider add
-
-# 列出所有 Provider
-aiassist config provider list
-
-# 启用/禁用 Provider
-aiassist config provider enable <name>
-aiassist config provider disable <name>
-
-# 删除 Provider
-aiassist config provider delete <name>
-
-# 启用/禁用模型
-aiassist config model enable <provider/model-name>
-aiassist config model disable <provider/model-name>
-
-# 设置默认模型
-aiassist config model default <provider/model-name>
-
 # 查看当前配置
 aiassist config view
 
 # 查看帮助
 aiassist --help
 ```
+
+> **注意**：配置管理通过直接编辑配置文件 `~/.aiassist/config.yaml` 来完成。运行 `aiassist config` 会启动交互式配置向导，帮助您完成初始配置。
 
 ## 🔧 配置说明
 
@@ -304,8 +286,8 @@ providers:
 
 **建议：**
 - 配置多个 Provider 或多个模型，确保有备用方案
-- 定期检查模型状态：`aiassist config provider list`
 - 如模型长期不可用，请检查 API Key 的额度和计费状态
+- 运行 `aiassist config view` 查看当前配置和模型状态
 
 **💡 关于付费模型：**
 
