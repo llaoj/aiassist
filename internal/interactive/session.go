@@ -105,6 +105,9 @@ func (s *Session) Run(initialQuestion string) (err error) {
 
 	// If initial question is provided, process it first
 	if initialQuestion != "" {
+		color.Yellow("[%s]: %s\n", s.translator.T("interactive.user_label"), initialQuestion)
+		fmt.Println()
+
 		if err := s.processQuestion(initialQuestion); err != nil {
 			return err
 		}
@@ -229,8 +232,8 @@ func (s *Session) callLLM(systemPrompt string) (response string, modelUsed strin
 
 // displayResponse displays AI response with model name
 func (s *Session) displayResponse(modelUsed, response string) {
-	color.Cyan("[%s]\n", modelUsed)
-	color.Cyan("%s\n", response)
+	color.Cyan("[%s]: \n", modelUsed)
+	color.Cyan("%s\n\n", response)
 	// Flush to ensure output appears immediately in pipe mode
 	os.Stdout.Sync()
 }
@@ -327,6 +330,9 @@ func (s *Session) runInteractiveLoop() error {
 			continue
 		}
 
+		// Print question so it stays visible after huh clears the input field
+		color.Yellow("[%s]: %s\n", s.translator.T("interactive.user_label"), userInput)
+
 		// Process the question
 		if err := s.processQuestion(userInput); err != nil {
 			if errors.Is(err, ErrUserAbort) || errors.Is(err, ErrUserExit) {
@@ -379,11 +385,13 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 		}
 		if err != nil {
 			color.Red(s.translator.T("executor.execute_failed", err) + "\n")
+			fmt.Println()
 			continue
 		}
 
 		// Show execution success message
 		color.Green(s.translator.T("executor.execute_success") + "\n")
+		fmt.Println()
 
 		// Handle empty output - tell AI explicitly
 		if output == "" {

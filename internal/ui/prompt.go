@@ -6,8 +6,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Common errors
@@ -23,16 +23,24 @@ var (
 	ctrlCMessage = "Press Ctrl+C again to exit"
 )
 
-// getDefaultKeyMap returns a custom keymap with Tab for accepting suggestions
-func getDefaultKeyMap() *huh.KeyMap {
-	keymap := huh.NewDefaultKeyMap()
-	// Override the AcceptSuggestion key to use Tab instead of Ctrl+E
-	keymap.Input.AcceptSuggestion = key.NewBinding(
-		key.WithKeys("tab"),
-		key.WithHelp("tab", "complete"),
-	)
-	return keymap
+// getInputTheme returns a minimal theme without the left vertical bar and indentation
+func getInputTheme() *huh.Theme {
+	t := huh.ThemeBase()
+	t.Focused.Base = lipgloss.NewStyle()
+	t.Blurred.Base = lipgloss.NewStyle()
+	return t
 }
+
+// getSelectTheme returns a minimal theme for select without the left vertical bar and indentation
+func getSelectTheme() *huh.Theme {
+	t := huh.ThemeBase()
+	t.Focused.Base = lipgloss.NewStyle()
+	t.Blurred.Base = lipgloss.NewStyle()
+	t.Focused.Title = t.Focused.Title.PaddingLeft(0)
+	t.Blurred.Title = t.Blurred.Title.PaddingLeft(0)
+	return t
+}
+
 
 // PromptInput displays an input prompt and returns the user's input
 func PromptInput(prompt string) (string, error) {
@@ -41,7 +49,7 @@ func PromptInput(prompt string) (string, error) {
 	err := huh.NewInput().
 		Title(prompt).
 		Value(&input).
-		WithKeyMap(getDefaultKeyMap()).
+		WithTheme(getInputTheme()).
 		Run()
 
 	if err != nil {
@@ -69,8 +77,8 @@ func PromptInputWithHistory(prompt string, suggestions []string) (string, error)
 		inputField = inputField.Suggestions(suggestions)
 	}
 
-	// Apply custom keymap (must be last)
-	err := inputField.WithKeyMap(getDefaultKeyMap()).Run()
+	// Apply theme (must be last)
+	err := inputField.WithTheme(getInputTheme()).Run()
 
 	if err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
@@ -94,6 +102,7 @@ func PromptConfirm(prompt string) (bool, error) {
 				huh.NewOption("No", "no"),
 			).
 			Value(&selected).
+			WithTheme(getSelectTheme()).
 			Run()
 
 		if err != nil {
@@ -140,6 +149,7 @@ func PromptConfirmWithDefault(prompt string, defaultValue bool) (bool, error) {
 				huh.NewOption("No", "no"),
 			).
 			Value(&selected).
+			WithTheme(getSelectTheme()).
 			Run()
 
 		if err != nil {

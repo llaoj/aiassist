@@ -45,7 +45,7 @@ var EnglishMessages = map[string]string{
 	// Interactive mode messages
 	"interactive.welcome":              "Welcome to AI Shell Assistant",
 	"interactive.help_hint":            "Type 'exit' or 'quit' to exit, 'help' for help",
-	"interactive.input_prompt":         "??? Please enter your question: ",
+	"interactive.input_prompt":         "Please enter your question: ",
 	"interactive.goodbye":              "Goodbye!",
 	"interactive.help_title":           "Help:",
 	"interactive.help_command":         "  help        - Display this help message",
@@ -72,10 +72,10 @@ var EnglishMessages = map[string]string{
 
 	// Executor messages
 	"executor.query_command":        "Query command:",
-	"executor.modify_command":       "!!! Modify command (requires confirmation):",
-	"executor.unclassified_command": "? Unclassified command:",
+	"executor.modify_command":       "Modify command (requires confirmation):",
+	"executor.unclassified_command": "Unclassified command:",
 	"executor.execute_prompt":       "Execute this command? (y/n, exit to quit): ",
-	"executor.modify_warning":       "!!! Warning: This command will modify server configuration, are you sure? (y/n, exit to quit): ",
+	"executor.modify_warning":       "Warning: This command will modify server configuration, are you sure? (y/n, exit to quit): ",
 	"executor.executing":            "Executing",
 	"executor.execute_success":      "✓ Execution successful",
 	"executor.execute_failed":       "✗ Execution failed: %v",
