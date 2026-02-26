@@ -47,17 +47,13 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 	fmt.Println()
 }
 
-// ExecuteCommand executes the command
+// ExecuteCommand executes the command and returns the output
+// Note: Output is not printed here, caller should print it after spinner stops
 func (ce *CommandExecutor) ExecuteCommand(command string) (string, error) {
 	cmd := exec.Command("sh", "-c", command)
 
 	// Capture output and error
 	output, err := cmd.CombinedOutput()
-
-	// Print output to console
-	if len(output) > 0 {
-		fmt.Print(string(output))
-	}
 
 	// Return both output and error
 	// Caller can decide whether to treat non-zero exit as error

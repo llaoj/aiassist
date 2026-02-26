@@ -204,6 +204,4 @@ func (m *Manager) PrintStatus() {
 
 		fmt.Printf("- %s: %s\n", modelName, statusStr)
 	}
-
-	fmt.Println()
 }

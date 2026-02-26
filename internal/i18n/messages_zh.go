@@ -49,14 +49,11 @@ var ChineseMessages = map[string]string{
 	"interactive.goodbye":              "再见！",
 	"interactive.help_title":           "帮助:",
 	"interactive.help_command":         "  help        - 显示此帮助信息",
-	"interactive.help_history":         "  history     - 显示会话历史",
 	"interactive.help_exit":            "  exit        - 退出交互会话",
 	"interactive.help_examples":        "使用示例:",
 	"interactive.help_ex1":             "  为什么服务器负载很高?",
 	"interactive.help_ex2":             "  如何分析 Nginx 日志?",
 	"interactive.help_ex3":             "  如何查找占用 CPU 最高的进程?",
-	"interactive.history_empty":        "会话历史为空",
-	"interactive.history_title":        "会话历史:",
 	"interactive.commands_found":       "发现以下建议命令:",
 	"interactive.cancelled":            "已取消",
 	"interactive.thinking":             "思考中",
@@ -67,7 +64,7 @@ var ChineseMessages = map[string]string{
 	"interactive.ai_label":             "AI",
 	"interactive.all_commands_skipped": "所有命令均已跳过",
 	"interactive.analysis_complete":    "✓ 所有分析已完成",
-	"interactive.all_steps_complete":   "所有分析步骤已完成。是否继续提问? (y/n): ",
+	"interactive.all_steps_complete":   "所有分析步骤已完成。是否继续提问?: ",
 	"interactive.pipe_user_question":   "用户问题: ",
 	"interactive.pipe_data":            "管道输出数据:",
 	"interactive.pipe_source":          "数据来源: 通过管道输入",
@@ -108,6 +105,6 @@ var ChineseMessages = map[string]string{
 	"llm.priority":           "优先级",
 
 	// UI messages
-	"ui.ctrlc_exit_hint":      "再按一次 Ctrl+C 退出程序",
-	"ui.ctrlc_exit_message":   "用户通过 Ctrl+C 退出，再见！",
+	"ui.ctrlc_exit_hint":    "再按一次 Ctrl+C 退出程序",
+	"ui.ctrlc_exit_message": "用户通过 Ctrl+C 退出，再见！",
 }

@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/llaoj/aiassist/internal/config"
 	"github.com/llaoj/aiassist/internal/executor"
 	"github.com/llaoj/aiassist/internal/i18n"
 	"github.com/llaoj/aiassist/internal/llm"
@@ -37,7 +35,6 @@ type Session struct {
 	executor          *executor.CommandExecutor
 	history           []SessionMessage
 	translator        *i18n.I18n
-	commandHistory    *ui.History
 	recursionDepth    int // Current recursion depth for command handling
 	maxRecursionDepth int // Maximum allowed recursion depth
 }
@@ -66,17 +63,6 @@ func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
 		})
 	}
 
-	// Initialize command history
-	cfg := config.Get()
-	historyFile := filepath.Join(cfg.ConfigDir, "history")
-	session.commandHistory = ui.NewHistory(historyFile, 1000)
-
-	// Load command history
-	if err := session.commandHistory.Load(); err != nil {
-		// Non-fatal error, just log it
-		color.Yellow("Warning: failed to load command history: %v\n", err)
-	}
-
 	return session
 }
 
@@ -87,10 +73,6 @@ func (s *Session) Run(initialQuestion string) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("panic recovered: %v", r)
-		}
-		// Save command history on exit
-		if saveErr := s.commandHistory.Save(); saveErr != nil {
-			color.Yellow("Warning: failed to save command history: %v\n", saveErr)
 		}
 	}()
 
@@ -106,7 +88,6 @@ func (s *Session) Run(initialQuestion string) (err error) {
 	// If initial question is provided, process it first
 	if initialQuestion != "" {
 		color.Yellow("[%s]: %s\n", s.translator.T("interactive.user_label"), initialQuestion)
-		fmt.Println()
 
 		if err := s.processQuestion(initialQuestion); err != nil {
 			return err
@@ -119,26 +100,15 @@ func (s *Session) Run(initialQuestion string) (err error) {
 	return s.runInteractiveLoop()
 }
 
-// readUserInput reads input from terminal using huh
+// readUserInput reads input from terminal
 func (s *Session) readUserInput(prompt string) (string, error) {
-	// Get history suggestions
-	suggestions := s.commandHistory.GetRecent(50)
-
-	input, err := ui.PromptInputWithHistory(prompt, suggestions, s.translator)
+	input, err := ui.PromptInput(prompt, s.translator)
 	if err != nil {
 		if errors.Is(err, ui.ErrUserAbort) {
 			// User pressed Ctrl+C - return error to trigger exit
 			return "", err
 		}
 		return "", err
-	}
-
-	// Add to command history if not empty
-	if strings.TrimSpace(input) != "" {
-		if err := s.commandHistory.Append(input); err != nil {
-			// Non-fatal error, just log it
-			color.Yellow("Warning: failed to append to command history: %v\n", err)
-		}
 	}
 
 	return input, nil
@@ -208,6 +178,8 @@ func (s *Session) processQuestion(userInput string) error {
 	}
 
 	s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
+	// Print empty line before displaying response
+	fmt.Println()
 	s.displayResponse(modelUsed, response)
 
 	commands := s.executor.ExtractCommands(response)
@@ -295,6 +267,8 @@ func (s *Session) RunWithPipe(initialQuestion string) error {
 // runInteractiveLoop provides a unified interactive prompt loop for both Run and RunWithPipe
 func (s *Session) runInteractiveLoop() error {
 	for {
+		// Print empty line before showing input prompt
+		fmt.Println()
 		prompt := s.translator.T("interactive.input_prompt")
 		userInput, err := s.readUserInput(prompt)
 		if err != nil {
@@ -317,6 +291,9 @@ func (s *Session) runInteractiveLoop() error {
 			continue
 		}
 
+		// Print user input after it's entered (bubbletea clears the input prompt)
+		fmt.Println(userInput)
+
 		// Handle special commands
 		switch strings.ToLower(userInput) {
 		case "exit":
@@ -325,14 +302,7 @@ func (s *Session) runInteractiveLoop() error {
 		case "help":
 			s.printHelp()
 			continue
-		case "history":
-			s.printHistory()
-			continue
 		}
-
-		// Print question so it stays visible after huh clears the input field
-		color.Yellow("[%s]: %s\n", s.translator.T("interactive.user_label"), userInput)
-		fmt.Println()
 
 		// Process the question
 		if err := s.processQuestion(userInput); err != nil {
@@ -384,20 +354,26 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 		if execStop != nil {
 			execStop()
 		}
+
+		// Handle empty output - tell AI explicitly
+		if output == "" {
+			output = s.translator.T("executor.no_output")
+		}
+
+		// Print command output after spinner stops
+		// Print empty line before output
+		fmt.Println()
+		fmt.Printf("[%s]:\n", s.translator.T("interactive.execution_output"))
+		fmt.Print(output)
+
 		if err != nil {
 			color.Red(s.translator.T("executor.execute_failed", err) + "\n")
-			fmt.Println()
 			continue
 		}
 
 		// Show execution success message
 		color.Green(s.translator.T("executor.execute_success") + "\n")
 		fmt.Println()
-
-		// Handle empty output - tell AI explicitly
-		if output == "" {
-			output = s.translator.T("executor.no_output")
-		}
 
 		// Record first executed command
 		if !executedAny {
@@ -490,35 +466,10 @@ func (s *Session) analyzeCommandOutput(cmd, output string) error {
 func (s *Session) printHelp() {
 	fmt.Println("\n" + s.translator.T("interactive.help_title"))
 	fmt.Println(s.translator.T("interactive.help_command"))
-	fmt.Println(s.translator.T("interactive.help_history"))
 	fmt.Println(s.translator.T("interactive.help_exit"))
 	fmt.Println("\n" + s.translator.T("interactive.help_examples"))
 	fmt.Println(s.translator.T("interactive.help_ex1"))
 	fmt.Println(s.translator.T("interactive.help_ex2"))
 	fmt.Println(s.translator.T("interactive.help_ex3"))
 	fmt.Println()
-}
-
-// printHistory displays session history
-func (s *Session) printHistory() {
-	if len(s.history) == 0 {
-		color.Yellow(s.translator.T("interactive.history_empty") + "\n")
-		return
-	}
-
-	color.Cyan("\n" + s.translator.T("interactive.history_title") + "\n")
-	color.Cyan(ui.Separator() + "\n")
-
-	// Display all messages in history
-	for _, msg := range s.history {
-		switch msg.Role {
-		case "system":
-			color.Green("[System Info]\n")
-		case "user":
-			color.Yellow("[%s]: %s\n", s.translator.T("interactive.user_label"), msg.Content)
-		case "assistant":
-			color.Cyan("[%s]: %s\n", s.translator.T("interactive.ai_label"), msg.Content)
-		}
-		color.Cyan(ui.Separator() + "\n")
-	}
 }
