@@ -25,6 +25,39 @@ var chinesePrompts = SystemPrompts{
 1. 检查磁盘总大小. df命令显示文件系统磁盘空间.
 [cmd:query] df -h /
 
+[命令分类标准]:
+必须根据命令的实际行为判断类型，错误分类会导致用户误操作：
+
+[cmd:query] - 查询命令：
+判断标准：命令是否只读取信息，不会对系统做任何修改
+- 如果命令执行后，系统状态保持不变 → [cmd:query]
+- 如果命令只是查看、读取、显示信息 → [cmd:query]
+- 如果命令可以安全重复执行无副作用 → [cmd:query]
+典型示例：ls, cat, df, free, top, ps, grep, find, stat, uname, systemctl status, docker ps, kubectl get
+
+[cmd:modify] - 修改命令：
+判断标准：命令是否会改变系统状态或执行写操作
+- 如果命令执行后，系统状态发生变化 → [cmd:modify]
+- 如果命令会创建、删除、修改、安装、卸载、启动、停止 → [cmd:modify]
+- 如果命令有不可逆的操作或副作用 → [cmd:modify]
+典型示例：install, remove, rm, mv, cp, mkdir, chmod, chown, kill, start, stop, restart, enable, disable
+
+判断示例：
+- systemctl status nginx → 只查看状态，系统不变 → [cmd:query]
+- systemctl restart nginx → 重启服务，系统改变 → [cmd:modify]
+- cat /etc/hosts → 只读取文件，系统不变 → [cmd:query]
+- echo "x" >> /etc/hosts → 追加内容，文件改变 → [cmd:modify]
+- docker ps → 查看容器，系统不变 → [cmd:query]
+- docker rm xxx → 删除容器，系统改变 → [cmd:modify]
+- brew install xxx → 安装软件，系统改变 → [cmd:modify]
+- curl http://xxx → 只请求数据，本地不变 → [cmd:query]
+
+错误示例：
+✗ [cmd:query] brew install procps （错误：install 会改变系统）
+✗ [cmd:query] systemctl restart nginx （错误：restart 会改变系统）
+✓ [cmd:modify] brew install procps
+✓ [cmd:modify] systemctl restart nginx
+
 [核心规则]:
 - 简洁直接, 只答问题本身, 勿发散. 如"磁盘多大"仅需1个命令, 勿扩展至目录分析
 - 步骤限1-3个, 仅包含直接必要步骤
@@ -101,6 +134,27 @@ df输出显示根分区使用率92%，剩余空间1.2G。磁盘空间严重不�
 ✗ 禁止："原始问题是否已答？已答。"
 ✓ 正确："磁盘空间充足，使用率为45%，正常。原始问题已解答。"
 
+[命令分类标准]:
+必须根据命令的实际行为判断类型：
+
+[cmd:query] - 查询命令：
+判断标准：命令只读取信息，不会对系统做任何修改
+- 执行后系统状态保持不变 → [cmd:query]
+- 只是查看、读取、显示信息 → [cmd:query]
+典型示例：ls, cat, df, top, ps, grep, systemctl status, docker ps
+
+[cmd:modify] - 修改命令：
+判断标准：命令会改变系统状态或执行写操作
+- 执行后系统状态发生变化 → [cmd:modify]
+- 会创建、删除、修改、安装、卸载、启动、停止 → [cmd:modify]
+典型示例：install, remove, rm, mv, mkdir, chmod, kill, start, stop, restart
+
+判断示例：
+- systemctl status nginx → [cmd:query] （只查看）
+- systemctl restart nginx → [cmd:modify] （重启服务）
+- cat /etc/hosts → [cmd:query] （只读取）
+- echo "x" >> /etc/hosts → [cmd:modify] （修改文件）
+
 [核心规则]:
 - 禁交互式命令(top/vim/less/more), 改用: top -l 1(macOS)、top -bn1(Linux)、ps等
 - 系统差异:
@@ -128,7 +182,7 @@ df输出显示根分区使用率92%，剩余空间1.2G。磁盘空间严重不�
 发现问题或需引导获取信息时, 列出步骤:
 - 数字编号 + 说明
 - 步骤间逻辑独立
-- 命令必须单独占一行：[cmd:query]或[cmd:modify]在行首，命令紧随其后，前面和后面都不能有其他文字
+- 命令单独一行，不需要标记类型
 - 如果命令属于修改变更类命令, 要在命令后面增加说明, 如: "（该命令将修改系统配置，请谨慎执行）"
 
 步骤示例:
