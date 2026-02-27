@@ -477,9 +477,6 @@ make build
 # 构建所有平台
 ./scripts/build-all.sh
 
-# 运行测试
-go test ./...
-
 # 运行
 ./aiassist
 ```
@@ -518,7 +515,6 @@ aiassist/
 - **CLI 框架**: cobra
 - **配置**: YAML
 - **HTTP 客户端**: 标准库 net/http
-- **测试**: Go testing
 
 ## 🤝 贡献
 

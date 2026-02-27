@@ -26,12 +26,6 @@ make build-all
 
 # Clean build artifacts
 make clean
-
-# Run tests
-go test ./...
-
-# Run specific test
-go test -v ./internal/config
 ```
 
 ## Architecture
@@ -157,16 +151,6 @@ For large outputs, the system uses intelligent truncation:
 - Pipe mode: 400k character limit (supports ~13k lines of nginx logs)
 - Keeps 60% from beginning, 40% from end
 - Adds truncation message showing number of omitted lines
-
-## Testing
-
-Tests use standard Go testing framework. Key test files:
-- `config_test.go`: Configuration loading/saving
-- `executor_test.go`: Command extraction and classification
-- `manager_test.go`: LLM provider fallback logic
-- `prompts_test.go`: Prompt generation by language
-
-Run all tests: `go test ./...`
 
 ## Version Information
 

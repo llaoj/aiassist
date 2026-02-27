@@ -273,7 +273,6 @@ func (s *Session) runInteractiveLoop() error {
 		if err != nil {
 			if errors.Is(err, ErrUserAbort) {
 				// User pressed Ctrl+C
-				color.Cyan("\n" + s.translator.T("ui.ctrlc_exit_message") + "\n")
 				return ErrUserExit
 			}
 			if err == io.EOF {
