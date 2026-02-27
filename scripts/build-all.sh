@@ -13,11 +13,12 @@ NC='\033[0m' # No Color
 # Get version info (allow CI to inject)
 VERSION=${VERSION:-$(git describe --tags --always 2>/dev/null || echo "dev")}
 COMMIT=${COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")}
+BUILD_DATE=${BUILD_DATE:-$(date -u +"%Y-%m-%d")}
 
 # Build variables
 BINARY_NAME="aiassist"
 OUTPUT_DIR="dist"
-LDFLAGS="-X main.Version=${VERSION} -X main.Commit=${COMMIT} -s -w"
+LDFLAGS="-X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildDate=${BUILD_DATE} -s -w"
 
 # Platforms to build for
 PLATFORMS=(

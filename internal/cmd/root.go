@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	appVersion = "unknown"
-	appCommit  = "unknown"
+	appVersion  = "unknown"
+	appCommit   = "unknown"
+	appBuildDate = "unknown"
 )
 
 var rootCmd = &cobra.Command{
@@ -51,10 +52,11 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 }
 
-// SetVersionInfo sets version and commit information
-func SetVersionInfo(version, commit string) {
+// SetVersionInfo sets version, commit and build date information
+func SetVersionInfo(version, commit, buildDate string) {
 	appVersion = version
 	appCommit = commit
+	appBuildDate = buildDate
 }
 
 func Execute() error {

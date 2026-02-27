@@ -10,10 +10,11 @@ import (
 	"github.com/llaoj/aiassist/internal/interactive"
 )
 
-// Version and Commit are injected at build time via ldflags
+// Version, Commit and BuildDate are injected at build time via ldflags
 var (
-	Version = "unknown"
-	Commit  = "unknown"
+	Version   = "unknown"
+	Commit    = "unknown"
+	BuildDate = "unknown"
 )
 
 func init() {
@@ -23,7 +24,7 @@ func init() {
 	}
 
 	// Set version info globally for commands to access
-	cmd.SetVersionInfo(Version, Commit)
+	cmd.SetVersionInfo(Version, Commit, BuildDate)
 }
 
 func main() {

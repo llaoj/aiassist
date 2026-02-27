@@ -18,6 +18,6 @@ var versionCmd = &cobra.Command{
 		fmt.Println(translator.T("version.app_name"))
 		fmt.Println(translator.T("version.version", appVersion))
 		fmt.Println(translator.T("version.commit", appCommit))
-		fmt.Println(translator.T("version.build_date", "2026-01-21"))
+		fmt.Println(translator.T("version.build_date", appBuildDate))
 	},
 }
