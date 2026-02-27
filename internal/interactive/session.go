@@ -19,6 +19,11 @@ import (
 
 const (
 	// MaxPipeDataBytes limits pipe input to ~1.6MB
+	// This is the maximum amount of data read from stdin in pipe mode
+	// Set higher than MaxContextChars to allow truncation flexibility
+	MaxPipeDataBytes = 400000 * 4
+
+	// MaxContextChars limits any content sent to LLM context window
 	// Based on mainstream LLM context windows (2026):
 	// - DeepSeek-V3: 64K tokens
 	// - GPT-4/Qwen: 128K tokens
@@ -26,13 +31,8 @@ const (
 	// - Gemini 1.5: 1M tokens
 	// For nginx logs (~3.5 chars/token):
 	// 400K chars ≈ 114K tokens ≈ 13,000 lines of nginx access logs
-	MaxPipeDataBytes = 400000 * 4
-
-	// MaxPipeDataChars limits pipe data display to ~400k characters
-	MaxPipeDataChars = 400000
-
-	// MaxOutputChars limits command output display in interactive mode
-	MaxOutputChars = 100000
+	// This limit applies to both pipe data and command output uniformly
+	MaxContextChars = 400000
 )
 
 // Common errors
@@ -225,7 +225,7 @@ func (s *Session) RunWithPipe(initialQuestion string) error {
 		return err
 	}
 
-	truncatedPipeData := s.truncateOutput(string(pipeData), MaxPipeDataChars)
+	truncatedPipeData := s.truncateOutput(string(pipeData), MaxContextChars)
 
 	var pipeMsg string
 	if initialQuestion != "" {
@@ -385,7 +385,7 @@ func (s *Session) truncateOutput(output string, maxChars int) string {
 
 func (s *Session) analyzeCommandOutput(executionResult string) error {
 	// Truncate the execution result if it's too large
-	truncatedResult := s.truncateOutput(executionResult, MaxOutputChars)
+	truncatedResult := s.truncateOutput(executionResult, MaxContextChars)
 	s.history = append(s.history, SessionMessage{Role: "user", Content: truncatedResult})
 
 	fullContext := s.buildConversationContext() + s.translator.T("interactive.continue_analysis")
