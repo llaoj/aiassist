@@ -42,7 +42,6 @@ type ConsulConfig struct {
 // Config represents global configuration
 type Config struct {
 	Language     string                     `yaml:"language"`
-	HTTPProxy    string                     `yaml:"http_proxy"`
 	DefaultModel string                     `yaml:"default_model"`
 	Consul       *ConsulConfig              `yaml:"consul,omitempty"` // Consul config center settings
 	Providers    map[string]*ProviderConfig `yaml:"providers"`
@@ -73,7 +72,6 @@ func Init() error {
 	// Initialize config structure
 	globalConfig = &Config{
 		Language:     LanguageEnglish,
-		HTTPProxy:    "",
 		DefaultModel: "",
 		Providers:    make(map[string]*ProviderConfig),
 		ConfigDir:    configDir,
@@ -93,7 +91,6 @@ func Init() error {
 			if err == nil {
 				// Successfully loaded from Consul, use those providers
 				globalConfig.Language = cfg.Language
-				globalConfig.HTTPProxy = cfg.HTTPProxy
 				globalConfig.DefaultModel = cfg.DefaultModel
 				globalConfig.Providers = cfg.Providers
 				return nil
@@ -231,23 +228,6 @@ func (c *Config) DeleteProvider(providerName string) error {
 
 	delete(c.Providers, providerName)
 	return c.save()
-}
-
-// SetHTTPProxy sets the HTTP proxy address
-func (c *Config) SetHTTPProxy(proxy string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.HTTPProxy = proxy
-	return c.save()
-}
-
-// GetHTTPProxy returns the configured HTTP proxy address
-func (c *Config) GetHTTPProxy() string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return c.HTTPProxy
 }
 
 // SetLanguage sets the language preference

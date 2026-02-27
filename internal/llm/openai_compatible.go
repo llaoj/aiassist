@@ -3,20 +3,25 @@ package llm
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
+	"time"
 )
 
 // OpenAICompatibleProvider is a universal provider for OpenAI-compatible APIs
 // This can work with any LLM service that implements the OpenAI API standard
 type OpenAICompatibleProvider struct {
-	name      string
-	baseURL   string
-	apiKey    string
-	modelName string
-	available bool
+	name       string
+	baseURL    string
+	apiKey     string
+	modelName  string
+	available  bool
+	httpClient *http.Client
 }
 
 // Request and Response structures for OpenAI API
@@ -43,13 +48,57 @@ type choice struct {
 
 // NewOpenAICompatibleProvider creates a new OpenAI-compatible provider
 func NewOpenAICompatibleProvider(name, baseURL, apiKey, modelName string) *OpenAICompatibleProvider {
-	return &OpenAICompatibleProvider{
-		name:      name,
-		baseURL:   baseURL,
-		apiKey:    apiKey,
-		modelName: modelName,
-		available: true,
+	// Create HTTP client with reasonable timeout settings
+	// Timeout includes connection, request, and response time
+	transport := &http.Transport{
+		// Connection timeout
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second, // Connection establishment timeout
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		// TLS handshake timeout
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: false, // Secure by default
+		},
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
+		// Connection pool settings
+		MaxIdleConns:        10,
+		IdleConnTimeout:     30 * time.Second,
+		DisableCompression:  false,
+		// Proxy will be set via SetProxyFunc
 	}
+
+	client := &http.Client{
+		Timeout:   60 * time.Second, // Total request timeout
+		Transport: transport,
+	}
+
+	return &OpenAICompatibleProvider{
+		name:       name,
+		baseURL:    baseURL,
+		apiKey:     apiKey,
+		modelName:  modelName,
+		available:  true,
+		httpClient: client,
+	}
+}
+
+// SetProxyFunc configures proxy function for the provider
+// Use http.ProxyFromEnvironment for automatic environment-based proxy selection
+// or http.ProxyURL for a fixed proxy URL
+func (o *OpenAICompatibleProvider) SetProxyFunc(proxyFunc func(*http.Request) (*url.URL, error)) error {
+	if proxyFunc == nil {
+		return nil
+	}
+
+	transport, ok := o.httpClient.Transport.(*http.Transport)
+	if !ok {
+		return fmt.Errorf("transport is not *http.Transport")
+	}
+
+	transport.Proxy = proxyFunc
+	return nil
 }
 
 func (o *OpenAICompatibleProvider) GetName() string {
@@ -111,9 +160,12 @@ func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, sys
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+o.apiKey)
 
-	client := &http.Client{}
-	resp, err := client.Do(httpReq)
+	resp, err := o.httpClient.Do(httpReq)
 	if err != nil {
+		// Check if it's a timeout error
+		if urlErr, ok := err.(*url.Error); ok && urlErr.Timeout() {
+			return "", fmt.Errorf("%s API call timeout after 60s: %w", o.name, err)
+		}
 		return "", fmt.Errorf("%s API call failed: %w", o.name, err)
 	}
 	defer resp.Body.Close()

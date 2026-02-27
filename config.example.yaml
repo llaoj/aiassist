@@ -15,7 +15,7 @@ consul:
   token: ""                        # ACL Token（可选）
 
 # 注意：使用配置中心模式时
-# language、http_proxy、default_model、providers 全部从 Consul 加载
+# language、default_model、providers 全部从 Consul 加载
 # 本地文件不需要配置这些字段
 
 # ============================================
@@ -25,7 +25,6 @@ consul:
 # 内容如下：
 #
 # language: zh
-# http_proxy: ""
 # default_model: bailian/qwen-max
 # providers:
 #   bailian:
@@ -46,7 +45,6 @@ consul:
 # 优势：简单直接
 
 # language: zh
-# http_proxy: ""
 # default_model: bailian/qwen-max
 # 
 # # 不配置 consul 或设置 enabled: false

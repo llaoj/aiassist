@@ -17,7 +17,7 @@ var configCmd = &cobra.Command{
 var configViewCmd = &cobra.Command{
 	Use:   "view",
 	Short: "View current configuration",
-	Long:  "Display current configuration details including language, proxy, default model and all providers",
+	Long:  "Display current configuration details including language, default model and all providers",
 	Run: func(cmd *cobra.Command, args []string) {
 		viewConfig()
 	},
@@ -42,14 +42,6 @@ func viewConfig() {
 		langDisplay = "中文"
 	}
 	fmt.Printf("Language: %s (%s)\n", langDisplay, lang)
-
-	// HTTP Proxy
-	proxy := cfg.GetHTTPProxy()
-	if proxy == "" {
-		fmt.Printf("HTTP Proxy: Not configured\n")
-	} else {
-		fmt.Printf("HTTP Proxy: %s\n", proxy)
-	}
 
 	// Default Model
 	defaultModel := cfg.DefaultModel

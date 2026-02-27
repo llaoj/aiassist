@@ -34,7 +34,7 @@ consul agent -dev
 **配置中心模式（推荐）：**
 ```yaml
 # 启用 Consul 配置中心
-# 所有配置（language、http_proxy、default_model、providers）都从 Consul 加载
+# 所有配置（language、default_model、providers）都从 Consul 加载
 consul:
   enabled: true
   address: "127.0.0.1:8500"
@@ -45,7 +45,6 @@ consul:
 **本地配置模式：**
 ```yaml
 language: zh
-http_proxy: ""
 default_model: bailian/qwen-max
 
 # 不配置 consul 或设置 enabled: false
@@ -76,7 +75,6 @@ providers:
 **配置内容示例：**
 ```yaml
 language: zh
-http_proxy: ""
 default_model: bailian/qwen-max
 providers:
   bailian:
@@ -104,7 +102,6 @@ providers:
 # 创建配置文件
 cat > /tmp/consul-providers.yaml << 'EOF'
 language: zh
-http_proxy: ""
 default_model: bailian/qwen-max
 providers:
   bailian:
@@ -155,7 +152,6 @@ consul:
 2. 检测到 `consul.enabled: true`
 3. 连接 Consul，从 `key` 指定的位置加载**完整配置**
    - language（界面语言）
-   - http_proxy（HTTP 代理）
    - default_model（默认模型）
    - providers（模型提供商配置）
 4. 使用 Consul 中的配置运行
@@ -204,7 +200,7 @@ providers:
 检查 consul.enabled?
     ↓
    是 → 连接 Consul → 加载完整配置
-    ↓           ↓       (language, http_proxy, default_model, providers)
+    ↓           ↓       (language, default_model, providers)
    否      连接失败 → 使用本地配置
 ```
 
@@ -250,7 +246,7 @@ providers:
 - ❌ **禁止本地修改** - 本地配置文件只读
 
 **本地模式（无 consul 或 `enabled: false`）：**
-- language、http_proxy、default_model、providers **全部从本地文件读取**
+- language、default_model、providers **全部从本地文件读取**
 - ✅ **允许本地修改** - 直接编辑 `~/.aiassist/config.yaml`
 
 ### 配置保存
@@ -538,7 +534,7 @@ A: aiassist 每次启动时才从 Consul 加载配置。修改 Consul 配置后�
 
 **Q: 配置中心模式下，本地配置文件需要配置 language 和 providers 吗？**
 
-A: **不需要**。只需要配置 consul 连接信息，language、http_proxy、default_model、providers 全部从 Consul 加载。
+A: **不需要**。只需要配置 consul 连接信息，language、default_model、providers 全部从 Consul 加载。
 
 **Q: Consul 宕机了怎么办？**
 

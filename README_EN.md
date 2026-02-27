@@ -121,7 +121,6 @@ Use **Consul** for centralized configuration management, with all hosts loading 
    # Create Key: aiassist/config
    # Content:
    language: en
-   http_proxy: ""
    default_model: bailian/qwen-max
    providers:
      bailian:
@@ -164,7 +163,6 @@ Configuration example:
 
 ```yaml
 language: en
-http_proxy: ""
 default_model: bailian/qwen-max
 
 providers:

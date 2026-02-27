@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/fatih/color"
@@ -36,6 +37,7 @@ func initializeSession() (*interactive.Session, *i18n.I18n) {
 	manager := llm.NewManager(cfg)
 
 	// Register configured providers as OpenAI-compatible providers
+	// Use http.ProxyFromEnvironment for automatic proxy selection from environment variables
 	for _, provider := range enabledProviders {
 		for _, modelCfg := range provider.Models {
 			// Skip disabled models
@@ -50,6 +52,15 @@ func initializeSession() (*interactive.Session, *i18n.I18n) {
 				provider.APIKey,
 				modelCfg.Name,
 			)
+
+			// Configure HTTP proxy from environment variables
+			// Uses http.ProxyFromEnvironment which automatically selects:
+			// - HTTPS_PROXY for HTTPS URLs
+			// - HTTP_PROXY for HTTP URLs
+			if err := llmProvider.SetProxyFunc(http.ProxyFromEnvironment); err != nil {
+				color.Yellow("Warning: Failed to configure proxy for %s: %v\n", providerKey, err)
+			}
+
 			manager.RegisterProvider(providerKey, llmProvider)
 		}
 	}

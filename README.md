@@ -169,7 +169,6 @@ aiassist 支持两种配置模式：
    # 创建 Key: aiassist/config
    # 内容:
    language: zh
-   http_proxy: ""
    default_model: bailian/qwen-max
    providers:
      bailian:
@@ -218,7 +217,6 @@ aiassist 支持两种配置模式：
 
 ```yaml
 language: zh  # zh=中文, en=English
-http_proxy: ""  # HTTP 代理地址（可选）
 
 providers:
   bailian:  # Provider 名称
