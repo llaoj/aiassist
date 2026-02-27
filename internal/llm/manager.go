@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/fatih/color"
 	"github.com/llaoj/aiassist/internal/config"
 	"github.com/llaoj/aiassist/internal/i18n"
 )
@@ -89,7 +90,7 @@ func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt
 		}
 
 		if err != nil {
-			fmt.Printf("Error: %s call failed: %v\n", providerName, err)
+			color.Red("Error: %s call failed: %v\n", providerName, err)
 			continue
 		}
 

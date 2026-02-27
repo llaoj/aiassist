@@ -29,7 +29,7 @@ func initializeSession() (*interactive.Session, *i18n.I18n) {
 	enabledProviders := cfg.GetEnabledProviders()
 	if len(enabledProviders) == 0 {
 		color.Red(translator.T("error.no_models") + "\n")
-		fmt.Println(translator.T("error.hint_no_models"))
+		color.Red(translator.T("error.hint_no_models") + "\n")
 		os.Exit(1)
 	}
 
