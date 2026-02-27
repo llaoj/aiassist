@@ -261,6 +261,7 @@ func (s *Session) RunWithPipe(initialQuestion string) error {
 
 	// In pipe mode, just show the analysis and exit
 	// No interactive loop, no command execution
+	fmt.Println()
 	color.Green(s.translator.T("interactive.analysis_complete") + "\n")
 	os.Stdout.Sync() // Ensure all output is flushed
 
