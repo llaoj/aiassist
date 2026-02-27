@@ -307,8 +307,6 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 	defer func() { s.recursionDepth-- }()
 
 	executedAny := false
-	var firstExecutedCmd string
-	var firstExecutedOutput string
 
 	for _, cmd := range commands {
 		fmt.Println()
@@ -336,21 +334,27 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 		fmt.Printf("[%s]:\n", s.translator.T("interactive.execution_output"))
 		fmt.Println(output)
 
+		// Build execution result message including error information
+		var executionResult string
 		if err != nil {
 			color.Red(s.translator.T("executor.execute_failed", err))
-			continue
+			// Include error information in the execution result for LLM analysis
+			executionResult = fmt.Sprintf("[%s]\n%s\n\n[%s]\n%s\n\n[%s]\n%s",
+				s.translator.T("interactive.executed_command"), cmd.Text,
+				s.translator.T("interactive.execution_output"), output,
+				s.translator.T("interactive.execution_error"), err.Error())
+		} else {
+			// Show execution success message
+			color.Green(s.translator.T("executor.execute_success"))
+			executionResult = fmt.Sprintf("[%s]\n%s\n\n[%s]\n%s",
+				s.translator.T("interactive.executed_command"), cmd.Text,
+				s.translator.T("interactive.execution_output"), output)
 		}
 
-		// Show execution success message
-		color.Green(s.translator.T("executor.execute_success"))
-
-		// Record first executed command
+		// Record first executed command and analyze its output (whether success or failure)
 		if !executedAny {
 			executedAny = true
-			firstExecutedCmd = cmd.Text
-			firstExecutedOutput = output
-			// After executing the first command, analyze output and continue
-			return s.analyzeCommandOutput(firstExecutedCmd, firstExecutedOutput)
+			return s.analyzeCommandOutput(executionResult)
 		}
 	}
 
@@ -379,13 +383,10 @@ func (s *Session) truncateOutput(output string, maxChars int) string {
 	return fmt.Sprintf("%s\n\n... [%s] ...\n\n%s", head, truncationMsg, tail)
 }
 
-func (s *Session) analyzeCommandOutput(cmd, output string) error {
-	truncatedOutput := s.truncateOutput(output, MaxOutputChars)
-
-	executionMsg := fmt.Sprintf("[%s]\n%s\n\n[%s]\n%s",
-		s.translator.T("interactive.executed_command"), cmd,
-		s.translator.T("interactive.execution_output"), truncatedOutput)
-	s.history = append(s.history, SessionMessage{Role: "user", Content: executionMsg})
+func (s *Session) analyzeCommandOutput(executionResult string) error {
+	// Truncate the execution result if it's too large
+	truncatedResult := s.truncateOutput(executionResult, MaxOutputChars)
+	s.history = append(s.history, SessionMessage{Role: "user", Content: truncatedResult})
 
 	fullContext := s.buildConversationContext() + s.translator.T("interactive.continue_analysis")
 	ctx := context.Background()

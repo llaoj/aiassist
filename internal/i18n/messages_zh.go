@@ -53,6 +53,7 @@ var ChineseMessages = map[string]string{
 	"interactive.continue_analysis":    "根据以上完整的对话历史和已执行的命令输出，请继续进行接下来的分析和诊断，列出剩余的步骤和命令。",
 	"interactive.executed_command":     "执行命令",
 	"interactive.execution_output":     "执行输出",
+	"interactive.execution_error":      "执行错误",
 	"interactive.user_label":           "用户",
 	"interactive.ai_label":             "AI",
 	"interactive.all_commands_skipped": "所有命令均已跳过",

@@ -53,6 +53,7 @@ var EnglishMessages = map[string]string{
 	"interactive.continue_analysis":    "Based on the complete conversation history and the executed command output above, please continue with the next steps of analysis and diagnosis, listing the remaining steps and commands.",
 	"interactive.executed_command":     "Executed Command",
 	"interactive.execution_output":     "Execution Output",
+	"interactive.execution_error":      "Execution Error",
 	"interactive.user_label":           "User",
 	"interactive.ai_label":             "AI",
 	"interactive.all_commands_skipped": "All commands skipped", "interactive.analysis_complete": "✓ Analysis complete, please continue with questions", "interactive.all_steps_complete": "All analysis steps completed. Continue with more questions? (y/n): ",
