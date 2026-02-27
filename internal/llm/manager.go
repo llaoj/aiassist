@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/llaoj/aiassist/internal/config"
 	"github.com/llaoj/aiassist/internal/i18n"
+	"github.com/llaoj/aiassist/internal/ui"
 )
 
 // Manager manages the lifecycle of multiple LLM providers
@@ -78,6 +79,9 @@ func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt
 		var response string
 		var err error
 
+		// Start spinner before calling the model
+		stopSpinner := ui.StartSpinner(m.translator.T("interactive.thinking"))
+
 		// If provider supports system prompt, use the version with system prompt
 		if compatProvider, ok := provider.(*OpenAICompatibleProvider); ok && systemPrompt != "" {
 			response, err = compatProvider.CallWithSystemPrompt(ctx, systemPrompt, userPrompt)
@@ -85,8 +89,13 @@ func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt
 			response, err = provider.Call(ctx, userPrompt)
 		}
 
+		// Stop spinner after the call completes
+		if stopSpinner != nil {
+			stopSpinner()
+		}
+
 		if err != nil {
-			color.Red("Error: %s call failed: %v\n", providerName, err)
+			color.Red("Error: %v\n", err)
 			continue
 		}
 

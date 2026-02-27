@@ -206,11 +206,7 @@ func (s *Session) processQuestion(userInput string) error {
 func (s *Session) callLLM(systemPrompt string) (response string, modelUsed string, err error) {
 	conversationContext := s.buildConversationContext()
 	ctx := context.Background()
-	stopSpinner := ui.StartSpinner(s.translator.T("interactive.thinking"))
 	response, modelUsed, err = s.llmManager.CallWithFallbackSystemPrompt(ctx, systemPrompt, conversationContext)
-	if stopSpinner != nil {
-		stopSpinner()
-	}
 	return
 }
 
