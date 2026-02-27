@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/llaoj/aiassist/internal/executor"
