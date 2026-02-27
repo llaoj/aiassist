@@ -107,10 +107,8 @@ func Init() error {
 }
 
 // Get returns the global configuration instance
+// Note: Init() must be called before Get() (called in main.init())
 func Get() *Config {
-	if globalConfig == nil {
-		Init()
-	}
 	return globalConfig
 }
 

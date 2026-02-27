@@ -19,8 +19,10 @@ var (
 
 func init() {
 	// Initialize configuration (includes directory creation)
+	// Configuration initialization is mandatory - exit on failure
 	if err := config.Init(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize config: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: Failed to initialize config: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Set version info globally for commands to access
