@@ -19,7 +19,7 @@ const (
 // ModelConfig represents a single model configuration
 type ModelConfig struct {
 	Name    string `yaml:"name"`
-	Enabled bool   `yaml:"enabled"`
+	Enabled bool   `yaml:"enable"`
 }
 
 // ProviderConfig represents a single LLM provider configuration
@@ -41,10 +41,10 @@ type ConsulConfig struct {
 
 // Config represents global configuration
 type Config struct {
-	Language     string                     `yaml:"language"`
-	DefaultModel string                     `yaml:"default_model"`
-	Consul       *ConsulConfig              `yaml:"consul,omitempty"` // Consul config center settings
-	Providers    map[string]*ProviderConfig `yaml:"providers"`
+	Language     string            `yaml:"language"`
+	DefaultModel string            `yaml:"default_model"`
+	Consul       *ConsulConfig     `yaml:"consul,omitempty"` // Consul config center settings
+	Providers    []*ProviderConfig `yaml:"providers"`
 
 	ConfigDir  string       `yaml:"-"`
 	ConfigFile string       `yaml:"-"`
@@ -73,7 +73,7 @@ func Init() error {
 	globalConfig = &Config{
 		Language:     LanguageEnglish,
 		DefaultModel: "",
-		Providers:    make(map[string]*ProviderConfig),
+		Providers:    make([]*ProviderConfig, 0),
 		ConfigDir:    configDir,
 		ConfigFile:   configFile,
 	}
@@ -164,11 +164,19 @@ func (c *Config) AddProvider(providerName string, provider *ProviderConfig) erro
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.Providers == nil {
-		c.Providers = make(map[string]*ProviderConfig)
+	// Set the provider name
+	provider.Name = providerName
+
+	// Check if provider already exists, update if so
+	for i, p := range c.Providers {
+		if p.Name == providerName {
+			c.Providers[i] = provider
+			return c.save()
+		}
 	}
 
-	c.Providers[providerName] = provider
+	// Provider doesn't exist, append it
+	c.Providers = append(c.Providers, provider)
 	return c.save()
 }
 
@@ -177,7 +185,12 @@ func (c *Config) GetProvider(name string) *ProviderConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	return c.Providers[name]
+	for _, provider := range c.Providers {
+		if provider.Name == name {
+			return provider
+		}
+	}
+	return nil
 }
 
 // GetEnabledProviders returns list of enabled providers
@@ -213,11 +226,20 @@ func (c *Config) DeleteProvider(providerName string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.Providers == nil {
+	if c.Providers == nil || len(c.Providers) == 0 {
 		return fmt.Errorf("no providers configured")
 	}
 
-	if _, exists := c.Providers[providerName]; !exists {
+	// Find and remove the provider
+	index := -1
+	for i, provider := range c.Providers {
+		if provider.Name == providerName {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
 		return fmt.Errorf("provider %s not found", providerName)
 	}
 
@@ -226,7 +248,8 @@ func (c *Config) DeleteProvider(providerName string) error {
 		c.DefaultModel = ""
 	}
 
-	delete(c.Providers, providerName)
+	// Remove the provider from the slice
+	c.Providers = append(c.Providers[:index], c.Providers[index+1:]...)
 	return c.save()
 }
 

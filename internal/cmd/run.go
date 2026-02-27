@@ -99,7 +99,7 @@ func runPipeMode(initialQuestion string) {
 		// Check if it's a user exit or abort (normal termination)
 		if errors.Is(err, interactive.ErrUserExit) || errors.Is(err, interactive.ErrUserAbort) {
 			fmt.Println()
-			color.Cyan("\n" + translator.T("ui.ctrlc_exit_message") + "\n")
+			color.Cyan(translator.T("ui.ctrlc_exit_message") + "\n")
 			return // Normal exit
 		}
 		fmt.Println()

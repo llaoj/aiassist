@@ -53,14 +53,13 @@ default_model: bailian/qwen-max
 
 # 直接在本地配置 providers
 providers:
-  bailian:
-    name: bailian
+  - name: bailian
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
     enabled: true
     models:
       - name: qwen-max
-        enabled: true
+        enable: true
 ```
 
 ### 3. 写入配置到 Consul
@@ -77,16 +76,15 @@ providers:
 language: zh
 default_model: bailian/qwen-max
 providers:
-  bailian:
-    name: bailian
+  - name: bailian
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
     enabled: true
     models:
       - name: qwen-max
-        enabled: true
+        enable: true
       - name: qwen-plus
-        enabled: true
+        enable: true
   deepseek:
     name: deepseek
     base_url: https://api.deepseek.com/v1
@@ -104,14 +102,13 @@ cat > /tmp/consul-providers.yaml << 'EOF'
 language: zh
 default_model: bailian/qwen-max
 providers:
-  bailian:
-    name: bailian
+  - name: bailian
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
     enabled: true
     models:
       - name: qwen-max
-        enabled: true
+        enable: true
 EOF
 
 # 写入 Consul
@@ -169,14 +166,13 @@ consul:
 language: zh
 default_model: bailian/qwen-max
 providers:
-  bailian:
-    name: bailian
+  - name: bailian
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
     enabled: true
     models:
       - name: qwen-max
-        enabled: true
+        enable: true
 ```
 
 **工作流程：**
@@ -284,14 +280,13 @@ cat > /tmp/company-aiassist.yaml << 'EOF'
 language: zh
 default_model: company/llm-v1
 providers:
-  company:
-    name: company
+  - name: company
     base_url: https://ai-internal.company.com/v1
     api_key: ${COMPANY_AI_KEY}
     enabled: true
     models:
       - name: llm-v1
-        enabled: true
+        enable: true
 EOF
 
 # 上传到 Consul

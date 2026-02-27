@@ -171,14 +171,13 @@ aiassist 支持两种配置模式：
    language: zh
    default_model: bailian/qwen-max
    providers:
-     bailian:
-       name: bailian
+     - name: bailian
        base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
        api_key: sk-xxxxxxxxxxxx
        enabled: true
        models:
          - name: qwen-max
-           enabled: true
+           enable: true
    ```
 
 3. **配置本地文件** (`~/.aiassist/config.yaml`):
@@ -219,27 +218,25 @@ aiassist 支持两种配置模式：
 language: zh  # zh=中文, en=English
 
 providers:
-  bailian:  # Provider 名称
-    name: bailian
+  - name: bailian  # Provider 名称
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key: sk-xxx
     enabled: true
     models:
       - name: qwen-plus
-        enabled: true
+        enable: true
       - name: qwen-turbo
-        enabled: true
-  
-  openai:
-    name: openai
+        enable: true
+
+  - name: openai
     base_url: https://api.openai.com/v1
     api_key: sk-xxx
     enabled: true
     models:
       - name: gpt-4
-        enabled: true
+        enable: true
       - name: gpt-3.5-turbo
-        enabled: false
+        enable: false
 ```
 
 ### 模型调用顺序

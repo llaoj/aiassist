@@ -35,7 +35,7 @@ func LoadFromConsul(consulCfg *ConsulConfig) (*Config, error) {
 
 	// Parse YAML configuration
 	cfg := &Config{
-		Providers: make(map[string]*ProviderConfig),
+		Providers: make([]*ProviderConfig, 0),
 	}
 
 	if err := yaml.Unmarshal(pair.Value, cfg); err != nil {

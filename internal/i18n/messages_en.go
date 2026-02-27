@@ -79,6 +79,7 @@ var EnglishMessages = map[string]string{
 	"error.no_models":      "✗ Error: No models configured",
 	"error.hint_no_models": "Please edit config file first: ~/.aiassist/config.yaml",
 	"error.unknown_model":  "!!! Warning: Unknown model %s",
+	"error.general":        "✗ Error: %v",
 
 	// Version messages
 	"version.app_name":   "AI Shell Assistant (aiassist)",

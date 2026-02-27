@@ -27,16 +27,15 @@ consul:
 # language: zh
 # default_model: bailian/qwen-max
 # providers:
-#   bailian:
-#     name: bailian
+#   - name: bailian
 #     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
 #     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
 #     enabled: true
 #     models:
 #       - name: qwen-max
-#         enabled: true
+#         enable: true
 #       - name: qwen-plus
-#         enabled: true
+#         enable: true
 
 # ============================================
 # 模式二：本地配置模式（个人使用）
@@ -53,33 +52,30 @@ consul:
 # 
 # # 直接配置 providers
 # providers:
-#   bailian:
-#     name: bailian
+#   - name: bailian
 #     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
 #     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
 #     enabled: true
 #     models:
 #       - name: qwen-max
-#         enabled: true
+#         enable: true
 #       - name: qwen-plus
-#         enabled: true
-# 
-#   deepseek:
-#     name: deepseek
+#         enable: true
+#
+#   - name: deepseek
 #     base_url: https://api.deepseek.com/v1
 #     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
 #     enabled: true
 #     models:
 #       - name: deepseek-chat
-#         enabled: true
-# 
-#   openai:
-#     name: openai
+#         enable: true
+#
+#   - name: openai
 #     base_url: https://api.openai.com/v1
 #     api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx
 #     enabled: false
 #     models:
 #       - name: gpt-4
-#         enabled: true
+#         enable: true
 #       - name: gpt-3.5-turbo
-#         enabled: false
+#         enable: false

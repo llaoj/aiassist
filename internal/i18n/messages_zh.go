@@ -83,6 +83,7 @@ var ChineseMessages = map[string]string{
 	"error.no_models":      "✗ 错误: 未配置任何模型",
 	"error.hint_no_models": "请先编辑配置文件: ~/.aiassist/config.yaml",
 	"error.unknown_model":  "!!! 警告: 未知模型 %s",
+	"error.general":        "✗ 错误: %v",
 
 	// Version messages
 	"version.app_name":   "AI Shell Assistant (aiassist)",

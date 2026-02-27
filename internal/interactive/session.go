@@ -354,7 +354,10 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 		}
 
 		// Print command output after spinner stops
+		fmt.Println()
 		fmt.Printf("[%s]:\n", s.translator.T("interactive.execution_output"))
+		// Print the actual command output
+		fmt.Println(output)
 
 		if err != nil {
 			color.Red(s.translator.T("executor.execute_failed", err))
@@ -363,7 +366,6 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 
 		// Show execution success message
 		color.Green(s.translator.T("executor.execute_success"))
-		fmt.Println()
 
 		// Record first executed command
 		if !executedAny {

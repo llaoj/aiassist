@@ -60,17 +60,18 @@ func NewOpenAICompatibleProvider(name, baseURL, apiKey, modelName string) *OpenA
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: false, // Secure by default
 		},
-		TLSHandshakeTimeout:   10 * time.Second,
-		ResponseHeaderTimeout: 10 * time.Second,
+		TLSHandshakeTimeout: 10 * time.Second,
+		// Note: ResponseHeaderTimeout removed - let http.Client.Timeout handle overall timeout
+		// AI APIs may take time to process large requests before sending response headers
 		// Connection pool settings
-		MaxIdleConns:        10,
-		IdleConnTimeout:     30 * time.Second,
-		DisableCompression:  false,
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: false,
 		// Proxy will be set via SetProxyFunc
 	}
 
 	client := &http.Client{
-		Timeout:   60 * time.Second, // Total request timeout
+		Timeout:   120 * time.Second, // Total request timeout (increased for AI APIs)
 		Transport: transport,
 	}
 
@@ -164,7 +165,7 @@ func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, sys
 	if err != nil {
 		// Check if it's a timeout error
 		if urlErr, ok := err.(*url.Error); ok && urlErr.Timeout() {
-			return "", fmt.Errorf("%s API call timeout after 60s: %w", o.name, err)
+			return "", fmt.Errorf("%s API call timeout: %w", o.name, err)
 		}
 		return "", fmt.Errorf("%s API call failed: %w", o.name, err)
 	}

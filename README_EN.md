@@ -123,14 +123,13 @@ Use **Consul** for centralized configuration management, with all hosts loading 
    language: en
    default_model: bailian/qwen-max
    providers:
-     bailian:
-       name: bailian
+     - name: bailian
        base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
        api_key: sk-xxxxxxxxxxxx
        enabled: true
        models:
          - name: qwen-max
-           enabled: true
+           enable: true
    ```
 
 3. **Configure local file** (`~/.aiassist/config.yaml`):
@@ -166,16 +165,15 @@ language: en
 default_model: bailian/qwen-max
 
 providers:
-  bailian:
-    name: bailian
+  - name: bailian
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key: sk-xxxxxxxxxxxx
     enabled: true
     models:
       - name: qwen-max
-        enabled: true
+        enable: true
       - name: qwen-plus
-        enabled: true
+        enable: true
 ```
 
 ---

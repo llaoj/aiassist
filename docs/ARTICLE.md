@@ -448,16 +448,16 @@ sudo kill -9 1234
 ```yaml
 # 配置文件按优先级排列
 providers:
-  openai:
+  - name: openai
     enabled: true
     models:
       - name: gpt-4
-        enabled: true
-  deepseek:
+        enable: true
+  - name: deepseek
     enabled: true
     models:
       - name: deepseek-chat
-        enabled: true
+        enable: true
 ```
 
 当某个模型不可用时，自动切换到下一个，并在终端提示切换原因。
@@ -501,14 +501,13 @@ sudo mv aiassist /usr/local/bin/
 language: zh
 default_model: bailian/qwen-max
 providers:
-  bailian:
-    name: bailian
+  - name: bailian
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     api_key: sk-xxxxxxxxxxxx
     enabled: true
     models:
       - name: qwen-max
-        enabled: true
+        enable: true
 ```
 
 **支持所有 OpenAI 兼容接口**，包括：
@@ -585,14 +584,13 @@ func init() {
 ```bash
 # 在分发的二进制包中预置 ~/.aiassist/config.yaml
 providers:
-  enterprise:
-    name: enterprise
+  - name: enterprise
     base_url: https://ai-internal.company.com/v1
     api_key: ${ENTERPRISE_AI_KEY}
     enabled: true
     models:
       - name: company-llm-v1
-        enabled: true
+        enable: true
 ```
 
 **优势**：

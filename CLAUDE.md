@@ -101,13 +101,16 @@ The order of model calls is **determined by the order in the config file**. For 
 
 ```yaml
 providers:
-  bailian:  # First tried
+  - name: bailian  # First tried
     models:
       - name: qwen-plus  # 1st choice
+        enable: true
       - name: qwen-max   # 2nd choice
-  openai:   # Second tried if bailian fails
+        enable: true
+  - name: openai   # Second tried if bailian fails
     models:
       - name: gpt-4      # 3rd choice
+        enable: true
 ```
 
 The manager tries each enabled model in this exact order. If a model returns HTTP 429 (quota exhausted), it's marked unavailable and skipped.
