@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/llaoj/aiassist/internal/executor"
@@ -40,9 +41,7 @@ type Session struct {
 	maxRecursionDepth int // Maximum allowed recursion depth
 }
 
-// NewSession creates a new interactive session
 func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
-	// Initialize session
 	session := &Session{
 		llmManager:        manager,
 		executor:          executor.NewCommandExecutor(),
@@ -51,13 +50,10 @@ func NewSession(manager *llm.Manager, translator *i18n.I18n) *Session {
 		maxRecursionDepth: 10, // Allow deeper analysis for complex troubleshooting scenarios
 	}
 
-	// Load or collect system info and add to history
 	sysInfo, err := sysinfo.LoadOrCollect()
 	if err != nil {
-		// If failed, just log and continue without system info
 		color.Yellow("Warning: failed to load system info: %v\n", err)
 	} else {
-		// Add system info as the first message in history
 		session.history = append(session.history, SessionMessage{
 			Role:    "system",
 			Content: sysInfo.FormatAsContext(),
@@ -190,7 +186,6 @@ func (s *Session) processQuestion(userInput string) error {
 	return nil
 }
 
-// callLLM calls the LLM with current conversation context
 func (s *Session) callLLM(systemPrompt string) (response string, modelUsed string, err error) {
 	conversationContext := s.buildConversationContext()
 	ctx := context.Background()
@@ -202,18 +197,14 @@ func (s *Session) callLLM(systemPrompt string) (response string, modelUsed strin
 	return
 }
 
-// displayResponse displays AI response with model name
 func (s *Session) displayResponse(modelUsed, response string) {
-	// Trim leading and trailing whitespace/newlines from response to avoid extra blank lines
 	response = strings.TrimSpace(response)
 	fmt.Println()
 	fmt.Printf("[%s]:\n", modelUsed)
 	fmt.Printf("%s\n", response)
-	// Flush to ensure output appears immediately in pipe mode
 	os.Stdout.Sync()
 }
 
-// RunWithPipe runs with pipe input
 func (s *Session) RunWithPipe(initialQuestion string) error {
 	// Read pipe data with memory limit to prevent exhaustion
 	// Based on mainstream LLM context windows (2026):
@@ -232,11 +223,9 @@ func (s *Session) RunWithPipe(initialQuestion string) error {
 		return err
 	}
 
-	// Truncate if too long (~400k chars)
 	const maxPipeDataChars = 400000
 	truncatedPipeData := s.truncateOutput(string(pipeData), maxPipeDataChars)
 
-	// Build pipe message
 	var pipeMsg string
 	if initialQuestion != "" {
 		pipeMsg = fmt.Sprintf("%s\n%s%s\n\n%s\n%s",
@@ -249,7 +238,6 @@ func (s *Session) RunWithPipe(initialQuestion string) error {
 			s.translator.T("interactive.pipe_data"), truncatedPipeData)
 	}
 
-	// Process as a question with pipe analysis prompt
 	s.history = append(s.history, SessionMessage{Role: "user", Content: pipeMsg})
 	response, modelUsed, err := s.callLLM(prompt.GetPipeAnalysisPrompt())
 	if err != nil {
@@ -263,12 +251,11 @@ func (s *Session) RunWithPipe(initialQuestion string) error {
 	// No interactive loop, no command execution
 	fmt.Println()
 	color.Green(s.translator.T("interactive.analysis_complete") + "\n")
-	os.Stdout.Sync() // Ensure all output is flushed
+	os.Stdout.Sync()
 
 	return nil
 }
 
-// runInteractiveLoop provides a unified interactive prompt loop for both Run and RunWithPipe
 func (s *Session) runInteractiveLoop() error {
 	for {
 		// Print empty line before showing input prompt
@@ -294,10 +281,8 @@ func (s *Session) runInteractiveLoop() error {
 			continue
 		}
 
-		// Print user input after it's entered (bubbletea clears the input prompt)
 		fmt.Println(userInput)
 
-		// Process the question
 		if err := s.processQuestion(userInput); err != nil {
 			if errors.Is(err, ErrUserAbort) || errors.Is(err, ErrUserExit) || errors.Is(err, ErrUserDone) {
 				return err
@@ -308,13 +293,11 @@ func (s *Session) runInteractiveLoop() error {
 	}
 }
 
-// handleCommands processes extracted commands
 func (s *Session) handleCommands(commands []executor.Command) error {
 	if len(commands) == 0 {
 		return nil
 	}
 
-	// Check recursion depth to prevent stack overflow
 	if s.recursionDepth >= s.maxRecursionDepth {
 		color.Yellow(s.translator.T("executor.max_depth_reached") + "\n")
 		return nil
@@ -322,18 +305,14 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 	s.recursionDepth++
 	defer func() { s.recursionDepth-- }()
 
-	// Track if we executed at least one command
 	executedAny := false
 	var firstExecutedCmd string
 	var firstExecutedOutput string
 
-	// Process each command one by one
 	for _, cmd := range commands {
-		// Display command
 		fmt.Println()
 		s.executor.DisplayCommand(cmd.Text, cmd.Type, s.translator)
 
-		// Get user confirmation
 		confirmed, err := s.confirmCommandExecution(cmd.Type)
 		if err != nil {
 			return err
@@ -342,22 +321,18 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 			continue
 		}
 
-		// Show executing spinner using shared utility
 		execStop := ui.StartSpinner(s.translator.T("executor.executing"))
 		output, err := s.executor.ExecuteCommand(cmd.Text)
 		if execStop != nil {
 			execStop()
 		}
 
-		// Handle empty output - tell AI explicitly
 		if output == "" {
 			output = s.translator.T("executor.no_output")
 		}
 
-		// Print command output after spinner stops
 		fmt.Println()
 		fmt.Printf("[%s]:\n", s.translator.T("interactive.execution_output"))
-		// Print the actual command output
 		fmt.Println(output)
 
 		if err != nil {
@@ -378,7 +353,6 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 		}
 	}
 
-	// If no command was executed (all skipped), show message and return to let caller continue
 	if !executedAny {
 		fmt.Println()
 		color.Green(s.translator.T("interactive.analysis_complete") + "\n")
@@ -388,16 +362,13 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 	return nil
 }
 
-// truncateOutput intelligently truncates command output to fit within model limits
-// Keeps the beginning and end of output for better context
 func (s *Session) truncateOutput(output string, maxChars int) string {
 	if len(output) <= maxChars {
 		return output
 	}
 
-	// Keep first 60% and last 40% of the allowed content
 	headSize := int(float64(maxChars) * 0.6)
-	tailSize := maxChars - headSize - 100 // Reserve space for truncation message
+	tailSize := maxChars - headSize - 100
 
 	head := output[:headSize]
 	tail := output[len(output)-tailSize:]
@@ -407,19 +378,15 @@ func (s *Session) truncateOutput(output string, maxChars int) string {
 	return fmt.Sprintf("%s\n\n... [%s] ...\n\n%s", head, truncationMsg, tail)
 }
 
-// analyzeCommandOutput analyzes command output and continues investigation
 func (s *Session) analyzeCommandOutput(cmd, output string) error {
-	// Truncate output if too long (~100k chars)
 	const maxOutputChars = 100000
 	truncatedOutput := s.truncateOutput(output, maxOutputChars)
 
-	// Add execution result to history
 	executionMsg := fmt.Sprintf("[%s]\n%s\n\n[%s]\n%s",
 		s.translator.T("interactive.executed_command"), cmd,
 		s.translator.T("interactive.execution_output"), truncatedOutput)
 	s.history = append(s.history, SessionMessage{Role: "user", Content: executionMsg})
 
-	// Call LLM for analysis
 	fullContext := s.buildConversationContext() + s.translator.T("interactive.continue_analysis")
 	ctx := context.Background()
 	stopSpinner := ui.StartSpinner(s.translator.T("interactive.thinking"))
@@ -436,7 +403,6 @@ func (s *Session) analyzeCommandOutput(cmd, output string) error {
 	s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
 	s.displayResponse(modelUsed, response)
 
-	// Handle new commands or ask to continue
 	newCommands := s.executor.ExtractCommands(response)
 	if len(newCommands) > 0 {
 		return s.handleCommands(newCommands)

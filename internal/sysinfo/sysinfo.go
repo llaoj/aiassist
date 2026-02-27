@@ -35,7 +35,6 @@ type SystemInfo struct {
 	AvailableTools []string `json:"available_tools"` // Common tools available (docker, git, curl, etc.)
 }
 
-// GetConfigDir returns the full path to the config directory
 func GetConfigDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -44,7 +43,6 @@ func GetConfigDir() (string, error) {
 	return filepath.Join(home, configDir), nil
 }
 
-// GetSysInfoPath returns the full path to the sysinfo.json file
 func GetSysInfoPath() (string, error) {
 	dir, err := GetConfigDir()
 	if err != nil {
@@ -69,7 +67,6 @@ func LoadOrCollect() (*SystemInfo, error) {
 	return CollectAndSave()
 }
 
-// Load loads system info from cached file
 func Load() (*SystemInfo, error) {
 	path, err := GetSysInfoPath()
 	if err != nil {
@@ -89,7 +86,6 @@ func Load() (*SystemInfo, error) {
 	return &info, nil
 }
 
-// Collect collects current system information
 func Collect() (*SystemInfo, error) {
 	info := &SystemInfo{
 		OS:   runtime.GOOS,
@@ -104,7 +100,6 @@ func Collect() (*SystemInfo, error) {
 		info.HomeDir = home
 	}
 
-	// Get hostname
 	if hostname, err := os.Hostname(); err == nil {
 		info.Hostname = hostname
 	}
@@ -125,19 +120,13 @@ func Collect() (*SystemInfo, error) {
 		collectWindowsInfo(info)
 	}
 
-	// Get shell information
 	collectShellInfo(info)
-
-	// Get Python version
 	collectPythonVersion(info)
-
-	// Detect available tools
 	collectAvailableTools(info)
 
 	return info, nil
 }
 
-// CollectAndSave collects system info and saves to cache
 func CollectAndSave() (*SystemInfo, error) {
 	info, err := Collect()
 	if err != nil {
@@ -151,7 +140,6 @@ func CollectAndSave() (*SystemInfo, error) {
 	return info, nil
 }
 
-// Save saves system info to cache file
 func Save(info *SystemInfo) error {
 	dir, err := GetConfigDir()
 	if err != nil {
@@ -180,7 +168,6 @@ func Save(info *SystemInfo) error {
 	return nil
 }
 
-// collectLinuxInfo collects Linux-specific information
 func collectLinuxInfo(info *SystemInfo) {
 	// Try to get distribution info from /etc/os-release
 	if data, err := os.ReadFile("/etc/os-release"); err == nil {
@@ -198,7 +185,6 @@ func collectLinuxInfo(info *SystemInfo) {
 		}
 	}
 
-	// Get kernel version
 	if output, err := exec.Command("uname", "-r").Output(); err == nil {
 		info.Kernel = strings.TrimSpace(string(output))
 	}
@@ -211,34 +197,28 @@ func collectLinuxInfo(info *SystemInfo) {
 	}
 }
 
-// collectDarwinInfo collects macOS-specific information
 func collectDarwinInfo(info *SystemInfo) {
 	info.OSName = "macOS"
 	info.PackageManager = "brew" // Default, will verify if installed
 	info.InitSystem = "launchd"
 
-	// Get macOS version
 	if output, err := exec.Command("sw_vers", "-productVersion").Output(); err == nil {
 		info.OSVersion = strings.TrimSpace(string(output))
 	}
 
-	// Get kernel version
 	if output, err := exec.Command("uname", "-r").Output(); err == nil {
 		info.Kernel = strings.TrimSpace(string(output))
 	}
 }
 
-// collectWindowsInfo collects Windows-specific information
 func collectWindowsInfo(info *SystemInfo) {
 	info.OSName = "Windows"
 
-	// Get Windows version
 	if output, err := exec.Command("cmd", "/c", "ver").Output(); err == nil {
 		info.OSVersion = strings.TrimSpace(string(output))
 	}
 }
 
-// collectShellInfo collects shell information
 func collectShellInfo(info *SystemInfo) {
 	// Get shell from SHELL environment variable
 	shell := os.Getenv("SHELL")
@@ -303,12 +283,10 @@ func (s *SystemInfo) FormatAsContext() string {
 	return sb.String()
 }
 
-// String returns a formatted string representation
 func (s *SystemInfo) String() string {
 	return s.FormatAsContext()
 }
 
-// detectContainer checks if running in a container
 func detectContainer() bool {
 	// Check for Docker
 	if _, err := os.Stat("/.dockerenv"); err == nil {
@@ -326,7 +304,6 @@ func detectContainer() bool {
 	return false
 }
 
-// checkSudoAccess checks if user has sudo access
 func checkSudoAccess() bool {
 	// Try sudo -n true (non-interactive)
 	cmd := exec.Command("sudo", "-n", "true")
@@ -334,7 +311,6 @@ func checkSudoAccess() bool {
 	return err == nil
 }
 
-// detectPackageManager detects package manager based on distro ID
 func detectPackageManager(info *SystemInfo, distroID string) {
 	switch distroID {
 	case "ubuntu", "debian", "linuxmint":
@@ -354,7 +330,6 @@ func detectPackageManager(info *SystemInfo, distroID string) {
 	}
 }
 
-// collectPythonVersion collects Python version if available
 func collectPythonVersion(info *SystemInfo) {
 	// Try python3 first
 	if output, err := exec.Command("python3", "--version").Output(); err == nil {
@@ -368,7 +343,6 @@ func collectPythonVersion(info *SystemInfo) {
 	}
 }
 
-// collectAvailableTools checks for common DevOps tools
 func collectAvailableTools(info *SystemInfo) {
 	tools := []string{"docker", "git", "curl", "wget", "kubectl", "helm", "terraform", "ansible"}
 	available := []string{}

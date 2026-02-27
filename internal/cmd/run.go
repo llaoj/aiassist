@@ -13,7 +13,6 @@ import (
 	"github.com/llaoj/aiassist/internal/llm"
 )
 
-// initializeSession initializes and returns an interactive session
 func initializeSession() (*interactive.Session, *i18n.I18n) {
 	cfg := config.Get()
 	translator := i18n.New(cfg.GetLanguage())
@@ -68,20 +67,16 @@ func initializeSession() (*interactive.Session, *i18n.I18n) {
 	return interactive.NewSession(manager, translator), translator
 }
 
-// runInteractiveMode runs the interactive mode
 func runInteractiveMode(initialQuestion string) {
 	session, translator := initializeSession()
 
 	err := session.Run(initialQuestion)
 	if err != nil {
-		// Check if it's a user exit or abort (normal termination)
 		if errors.Is(err, interactive.ErrUserDone) {
-			// User chose "No" to exit
 			color.Cyan(translator.T("interactive.goodbye") + "\n")
 			return
 		}
 		if errors.Is(err, interactive.ErrUserExit) || errors.Is(err, interactive.ErrUserAbort) {
-			// User pressed Ctrl+C
 			color.Cyan("\n" + translator.T("ui.ctrlc_exit_message") + "\n")
 			return
 		}
@@ -90,17 +85,15 @@ func runInteractiveMode(initialQuestion string) {
 	}
 }
 
-// runPipeMode runs the pipe analysis mode
 func runPipeMode(initialQuestion string) {
 	session, translator := initializeSession()
 
 	err := session.RunWithPipe(initialQuestion)
 	if err != nil {
-		// Check if it's a user exit or abort (normal termination)
 		if errors.Is(err, interactive.ErrUserExit) || errors.Is(err, interactive.ErrUserAbort) {
 			fmt.Println()
 			color.Cyan(translator.T("ui.ctrlc_exit_message") + "\n")
-			return // Normal exit
+			return
 		}
 		fmt.Println()
 		color.Red(translator.T("error.general", err) + "\n")

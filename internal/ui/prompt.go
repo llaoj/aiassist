@@ -27,13 +27,12 @@ type inputModel struct {
 	err       error
 }
 
-// newInputModel creates a new input model
 func newInputModel(prompt string) inputModel {
 	ti := textinput.New()
 	ti.Placeholder = ""
-	ti.Prompt = "> " // Set single arrow prompt
+	ti.Prompt = "> "
 	ti.Focus()
-	ti.CharLimit = 0 // No limit
+	ti.CharLimit = 0
 	ti.Width = 80
 
 	return inputModel{
@@ -42,18 +41,14 @@ func newInputModel(prompt string) inputModel {
 	}
 }
 
-// Init initializes the model
 func (m inputModel) Init() tea.Cmd {
 	return textinput.Blink
 }
-
-// Update handles messages
 func (m inputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			// Return the input
 			return m, tea.Quit
 		case tea.KeyCtrlC, tea.KeyEsc:
 			m.quitting = true
@@ -62,13 +57,11 @@ func (m inputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Update text input
 	var cmd tea.Cmd
 	m.textInput, cmd = m.textInput.Update(msg)
 	return m, cmd
 }
 
-// View renders the model
 func (m inputModel) View() string {
 	if m.quitting {
 		return ""
@@ -85,7 +78,6 @@ type selectModel struct {
 	err      error
 }
 
-// newSelectModel creates a new select model
 func newSelectModel(prompt string, options []string) selectModel {
 	return selectModel{
 		prompt:   prompt,
@@ -94,18 +86,15 @@ func newSelectModel(prompt string, options []string) selectModel {
 	}
 }
 
-// Init initializes the model
 func (m selectModel) Init() tea.Cmd {
 	return nil
 }
 
-// Update handles messages
 func (m selectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			// Return the selection
 			return m, tea.Quit
 		case tea.KeyCtrlC, tea.KeyEsc:
 			m.quitting = true
@@ -125,7 +114,6 @@ func (m selectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the model
 func (m selectModel) View() string {
 	if m.quitting {
 		return ""
@@ -136,10 +124,8 @@ func (m selectModel) View() string {
 
 	for i, option := range m.options {
 		if i == m.selected {
-			// Selected option
 			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("36")).Render("> "+option) + "\n")
 		} else {
-			// Unselected option
 			b.WriteString("  " + option + "\n")
 		}
 	}

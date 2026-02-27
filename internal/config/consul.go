@@ -7,9 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LoadFromConsul loads configuration from Consul KV store
 func LoadFromConsul(consulCfg *ConsulConfig) (*Config, error) {
-	// Create Consul client
 	config := api.DefaultConfig()
 	config.Address = consulCfg.Address
 
@@ -22,7 +20,6 @@ func LoadFromConsul(consulCfg *ConsulConfig) (*Config, error) {
 		return nil, fmt.Errorf("failed to create consul client: %w", err)
 	}
 
-	// Get configuration from KV store
 	kv := client.KV()
 	pair, _, err := kv.Get(consulCfg.Key, nil)
 	if err != nil {
@@ -33,7 +30,6 @@ func LoadFromConsul(consulCfg *ConsulConfig) (*Config, error) {
 		return nil, fmt.Errorf("config not found in consul (key: %s)", consulCfg.Key)
 	}
 
-	// Parse YAML configuration
 	cfg := &Config{
 		Providers: make([]*ProviderConfig, 0),
 	}
@@ -45,9 +41,7 @@ func LoadFromConsul(consulCfg *ConsulConfig) (*Config, error) {
 	return cfg, nil
 }
 
-// SaveToConsul saves configuration to Consul KV store
 func SaveToConsul(consulCfg *ConsulConfig, cfg *Config) error {
-	// Create Consul client
 	config := api.DefaultConfig()
 	config.Address = consulCfg.Address
 
@@ -60,13 +54,11 @@ func SaveToConsul(consulCfg *ConsulConfig, cfg *Config) error {
 		return fmt.Errorf("failed to create consul client: %w", err)
 	}
 
-	// Serialize configuration to YAML
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to serialize config: %w", err)
 	}
 
-	// Save to KV store
 	kv := client.KV()
 	pair := &api.KVPair{
 		Key:   consulCfg.Key,

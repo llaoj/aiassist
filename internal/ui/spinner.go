@@ -31,7 +31,7 @@ func StartSpinner(message string) func() {
 		for {
 			select {
 			case <-done:
-				// 清理当前行
+				// Clear the current line
 				fmt.Print("\r\033[K")
 				return
 			case <-ticker.C:
@@ -43,6 +43,6 @@ func StartSpinner(message string) func() {
 
 	return func() {
 		close(done)
-		wg.Wait() // 等 goroutine 结束，保证不会多打印
+		wg.Wait() // Wait for goroutine to finish, prevent extra prints
 	}
 }

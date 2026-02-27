@@ -14,10 +14,7 @@ type Message struct {
 type ModelProvider interface {
 	// Call sends an API request
 	Call(ctx context.Context, prompt string) (string, error)
-	// GetName returns the model name
 	GetName() string
-	// IsAvailable checks if the model is available
 	IsAvailable() bool
-	// GetRemainingCalls returns remaining API calls
 	GetRemainingCalls() int
 }

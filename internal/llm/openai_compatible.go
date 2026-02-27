@@ -46,28 +46,21 @@ type choice struct {
 	Message chatMessage `json:"message"`
 }
 
-// NewOpenAICompatibleProvider creates a new OpenAI-compatible provider
 func NewOpenAICompatibleProvider(name, baseURL, apiKey, modelName string) *OpenAICompatibleProvider {
-	// Create HTTP client with reasonable timeout settings
-	// Timeout includes connection, request, and response time
 	transport := &http.Transport{
-		// Connection timeout
 		DialContext: (&net.Dialer{
-			Timeout:   10 * time.Second, // Connection establishment timeout
+			Timeout:   10 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}).DialContext,
-		// TLS handshake timeout
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: false, // Secure by default
+			InsecureSkipVerify: false,
 		},
 		TLSHandshakeTimeout: 10 * time.Second,
 		// Note: ResponseHeaderTimeout removed - let http.Client.Timeout handle overall timeout
 		// AI APIs may take time to process large requests before sending response headers
-		// Connection pool settings
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
 		DisableCompression: false,
-		// Proxy will be set via SetProxyFunc
 	}
 
 	client := &http.Client{
@@ -118,16 +111,13 @@ func (o *OpenAICompatibleProvider) Call(ctx context.Context, prompt string) (str
 	return o.CallWithSystemPrompt(ctx, "", prompt)
 }
 
-// CallWithSystemPrompt calls the LLM API with a system prompt
 func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, systemPrompt string, userPrompt string) (string, error) {
 	if !o.available {
 		return "", fmt.Errorf("%s is unavailable (quota exhausted or billing issue)", o.name)
 	}
 
-	// Prepare messages
 	messages := []chatMessage{}
 
-	// Add system message if provided
 	if systemPrompt != "" {
 		messages = append(messages, chatMessage{
 			Role:    "system",
@@ -135,13 +125,11 @@ func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, sys
 		})
 	}
 
-	// Add user message
 	messages = append(messages, chatMessage{
 		Role:    "user",
 		Content: userPrompt,
 	})
 
-	// Prepare request
 	req := chatCompletionRequest{
 		Model:    o.modelName,
 		Messages: messages,
@@ -152,7 +140,6 @@ func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, sys
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	// Make HTTP request
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", o.baseURL+"/chat/completions", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)

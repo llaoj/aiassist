@@ -20,7 +20,6 @@ type Manager struct {
 	modelEnabled  map[string]bool // Track enabled status for each model
 }
 
-// NewManager creates a new LLM manager
 func NewManager(cfg *config.Config) *Manager {
 	return &Manager{
 		providers:     make(map[string]ModelProvider),
@@ -31,7 +30,6 @@ func NewManager(cfg *config.Config) *Manager {
 	}
 }
 
-// RegisterProvider registers an LLM provider
 func (m *Manager) RegisterProvider(name string, provider ModelProvider) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -52,12 +50,10 @@ func (m *Manager) RegisterProvider(name string, provider ModelProvider) {
 	m.modelEnabled[name] = true
 }
 
-// CallWithFallback calls the primary model, automatically switching to fallback models on failure
 func (m *Manager) CallWithFallback(ctx context.Context, prompt string) (string, string, error) {
 	return m.CallWithFallbackSystemPrompt(ctx, "", prompt)
 }
 
-// CallWithFallbackSystemPrompt calls the primary model with system prompt support, automatically switching to fallback models on failure
 func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt string, userPrompt string) (string, string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -117,17 +113,14 @@ func (m *Manager) CallSpecific(ctx context.Context, modelName string, prompt str
 	return provider.Call(ctx, prompt)
 }
 
-// GetAvailableProviders gets the list of available providers (in config order)
 func (m *Manager) getAvailableProviders() []string {
 	var available []string
 
-	// Return providers in the order they were registered (config file order)
 	for _, name := range m.providerOrder {
 		provider, exists := m.providers[name]
 		if !exists {
 			continue
 		}
-		// Check both provider availability and model enabled status
 		if provider.IsAvailable() && m.isModelEnabled(name) {
 			available = append(available, name)
 		}
@@ -136,7 +129,6 @@ func (m *Manager) getAvailableProviders() []string {
 	return available
 }
 
-// isModelEnabled checks if a model is enabled
 func (m *Manager) isModelEnabled(modelName string) bool {
 	enabled, exists := m.modelEnabled[modelName]
 	if !exists {
@@ -145,21 +137,18 @@ func (m *Manager) isModelEnabled(modelName string) bool {
 	return enabled
 }
 
-// DisableModel marks a model as disabled
 func (m *Manager) DisableModel(modelName string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.modelEnabled[modelName] = false
 }
 
-// EnableModel marks a model as enabled
 func (m *Manager) EnableModel(modelName string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.modelEnabled[modelName] = true
 }
 
-// GetStatus gets status information for all providers
 func (m *Manager) GetStatus() map[string]map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -179,7 +168,6 @@ func (m *Manager) GetStatus() map[string]map[string]interface{} {
 	return status
 }
 
-// ResetDailyQuota resets daily call quota (should be called at a specified time each day)
 func (m *Manager) ResetDailyQuota() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -189,7 +177,6 @@ func (m *Manager) ResetDailyQuota() error {
 	return m.config.Save()
 }
 
-// PrintStatus prints the current model status to the terminal
 func (m *Manager) PrintStatus() {
 	status := m.GetStatus()
 

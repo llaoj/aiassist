@@ -53,7 +53,6 @@ type Config struct {
 
 var globalConfig *Config
 
-// Init initializes global configuration
 func Init() error {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -112,7 +111,6 @@ func Get() *Config {
 	return globalConfig
 }
 
-// Load loads configuration from file
 func (c *Config) Load() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -129,7 +127,6 @@ func (c *Config) Load() error {
 	return nil
 }
 
-// Save saves configuration to file
 func (c *Config) Save() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -143,7 +140,6 @@ func (c *Config) save() error {
 	return c.saveToFile()
 }
 
-// saveToFile saves configuration to local file
 func (c *Config) saveToFile() error {
 	data, err := yaml.Marshal(c)
 	if err != nil {
@@ -157,7 +153,6 @@ func (c *Config) saveToFile() error {
 	return nil
 }
 
-// AddProvider adds a provider configuration
 func (c *Config) AddProvider(providerName string, provider *ProviderConfig) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -178,7 +173,6 @@ func (c *Config) AddProvider(providerName string, provider *ProviderConfig) erro
 	return c.save()
 }
 
-// GetProvider gets a provider configuration
 func (c *Config) GetProvider(name string) *ProviderConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -191,7 +185,6 @@ func (c *Config) GetProvider(name string) *ProviderConfig {
 	return nil
 }
 
-// GetEnabledProviders returns list of enabled providers
 func (c *Config) GetEnabledProviders() []*ProviderConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -206,7 +199,6 @@ func (c *Config) GetEnabledProviders() []*ProviderConfig {
 	return enabled
 }
 
-// GetAllProviders returns list of all providers
 func (c *Config) GetAllProviders() []*ProviderConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -219,7 +211,6 @@ func (c *Config) GetAllProviders() []*ProviderConfig {
 	return all
 }
 
-// DeleteProvider removes a provider configuration
 func (c *Config) DeleteProvider(providerName string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -251,7 +242,6 @@ func (c *Config) DeleteProvider(providerName string) error {
 	return c.save()
 }
 
-// SetLanguage sets the language preference
 func (c *Config) SetLanguage(lang string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -264,7 +254,6 @@ func (c *Config) SetLanguage(lang string) error {
 	return c.save()
 }
 
-// GetLanguage returns the language preference
 func (c *Config) GetLanguage() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -272,7 +261,6 @@ func (c *Config) GetLanguage() string {
 	return c.Language
 }
 
-// ConfigExists checks if configuration exists (either in Consul or local file)
 func (c *Config) ConfigExists() bool {
 	// If using Consul mode, check if providers exist
 	if c.Consul != nil && c.Consul.Enabled {

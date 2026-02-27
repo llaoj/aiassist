@@ -26,12 +26,10 @@ type Command struct {
 // CommandExecutor handles command extraction and execution
 type CommandExecutor struct{}
 
-// NewCommandExecutor creates a new command executor
 func NewCommandExecutor() *CommandExecutor {
 	return &CommandExecutor{}
 }
 
-// GetCommandTypeInfo returns the localized label and color for a command type
 func (ce *CommandExecutor) GetCommandTypeInfo(cmdType CommandType, translator *i18n.I18n) (string, *color.Color) {
 	if cmdType == QueryCommand {
 		return translator.T("executor.query_command"), color.New(color.FgGreen)
@@ -51,11 +49,7 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 // Note: Output is not printed here, caller should print it after spinner stops
 func (ce *CommandExecutor) ExecuteCommand(command string) (string, error) {
 	cmd := exec.Command("sh", "-c", command)
-
-	// Capture output and error
 	output, err := cmd.CombinedOutput()
-
-	// Return both output and error
 	// Caller can decide whether to treat non-zero exit as error
 	return string(output), err
 }

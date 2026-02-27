@@ -30,10 +30,8 @@ var sysinfoViewCmd = &cobra.Command{
 			color.Green("✓ System info collected and cached\n\n")
 		}
 
-		// Display system info
 		fmt.Println(info.String())
 
-		// Show cache file location
 		path, _ := sysinfo.GetSysInfoPath()
 		color.Cyan("Cache file: %s\n", path)
 
@@ -55,10 +53,8 @@ var sysinfoRefreshCmd = &cobra.Command{
 
 		color.Green("✓ System info refreshed successfully\n\n")
 
-		// Display updated info
 		fmt.Println(info.String())
 
-		// Show cache file location
 		path, _ := sysinfo.GetSysInfoPath()
 		color.Cyan("Cache file: %s\n", path)
 

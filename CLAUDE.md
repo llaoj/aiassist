@@ -212,6 +212,24 @@ Before completing any code change:
 - [ ] Examples still work as documented
 - [ ] Screenshots/diagrams are still accurate
 
+## Code Comments Guidelines
+
+**CRITICAL**: All code comments must be written in English.
+
+### Implementation Rules
+
+1. **Never write comments in Chinese** or any other non-English language
+2. **All inline comments, block comments, and documentation comments** must be in English
+3. **Variable names, function names, and other identifiers** should also be in English
+4. **Exception**: Translation files (like `messages_zh.go`, `prompts_zh.go`) contain Chinese text by design - these are not comments but actual content
+
+### Why English Comments
+
+- Code is read by developers worldwide
+- Consistency with Go community standards
+- Better collaboration and code review experience
+- Prevents encoding issues in different environments
+
 ## Internationalization (i18n) Guidelines
 
 **CRITICAL**: All user-facing messages must support both Chinese and English.
