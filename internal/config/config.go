@@ -19,7 +19,7 @@ const (
 // ModelConfig represents a single model configuration
 type ModelConfig struct {
 	Name    string `yaml:"name"`
-	Enabled bool   `yaml:"enable"`
+	Enabled bool   `yaml:"enabled"`
 }
 
 // ProviderConfig represents a single LLM provider configuration

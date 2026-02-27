@@ -54,7 +54,7 @@ make clean
 **LLM Manager**: `internal/llm/`
 - Manages multiple LLM providers (OpenAI, Alibaba Qwen, custom OpenAI-compatible APIs)
 - Automatic fallback: tries providers in config file order when one fails
-- Tracks model availability (marks unavailable on HTTP 429 quota exhaustion)
+- Tracks model availability (marks unavailable on HTTP errors)
 - `manager.go`: Provider lifecycle and fallback logic
 - `openai_compatible.go`: Generic OpenAI API client implementation
 
@@ -113,7 +113,7 @@ providers:
         enable: true
 ```
 
-The manager tries each enabled model in this exact order. If a model returns HTTP 429 (quota exhausted), it's marked unavailable and skipped.
+The manager tries each enabled model in this exact order. If a model returns an error, it's marked unavailable and skipped.
 
 ### Command Execution Flow
 
@@ -144,7 +144,6 @@ The manager tries each enabled model in this exact order. If a model returns HTT
 When adding/modifying providers or models:
 - Check `config.IsConsulMode()` first - if true, reject modifications
 - All provider operations go through `config.AddProvider()`, `config.DeleteProvider()`, etc.
-- Model enable/disable tracked in LLM manager's `modelEnabled` map
 - Default model format: `provider/model-name` (e.g., `bailian/qwen-max`)
 
 ### Output Truncation Strategy

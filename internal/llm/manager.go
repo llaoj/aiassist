@@ -18,14 +18,12 @@ type Manager struct {
 	mu            sync.RWMutex
 	config        *config.Config
 	translator    *i18n.I18n
-	modelEnabled  map[string]bool // Track enabled status for each model
 }
 
 func NewManager(cfg *config.Config) *Manager {
 	return &Manager{
 		providers:     make(map[string]ModelProvider),
 		providerOrder: make([]string, 0),
-		modelEnabled:  make(map[string]bool),
 		config:        cfg,
 		translator:    i18n.New(cfg.GetLanguage()),
 	}
@@ -47,8 +45,6 @@ func (m *Manager) RegisterProvider(name string, provider ModelProvider) {
 	if !found {
 		m.providerOrder = append(m.providerOrder, name)
 	}
-	// Initialize model as enabled
-	m.modelEnabled[name] = true
 }
 
 func (m *Manager) CallWithFallback(ctx context.Context, prompt string) (string, string, error) {
@@ -113,32 +109,12 @@ func (m *Manager) getAvailableProviders() []string {
 		if !exists {
 			continue
 		}
-		if provider.IsAvailable() && m.isModelEnabled(name) {
+		if provider.IsAvailable() {
 			available = append(available, name)
 		}
 	}
 
 	return available
-}
-
-func (m *Manager) isModelEnabled(modelName string) bool {
-	enabled, exists := m.modelEnabled[modelName]
-	if !exists {
-		return true // Default to enabled if not set
-	}
-	return enabled
-}
-
-func (m *Manager) DisableModel(modelName string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.modelEnabled[modelName] = false
-}
-
-func (m *Manager) EnableModel(modelName string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.modelEnabled[modelName] = true
 }
 
 func (m *Manager) GetStatus() map[string]map[string]interface{} {
@@ -148,12 +124,10 @@ func (m *Manager) GetStatus() map[string]map[string]interface{} {
 	status := make(map[string]map[string]interface{})
 
 	for name, provider := range m.providers {
-		isAvailable := provider.IsAvailable() && m.isModelEnabled(name)
+		isAvailable := provider.IsAvailable()
 		status[name] = map[string]interface{}{
-			"name":            provider.GetName(),
-			"available":       isAvailable,
-			"remaining_calls": provider.GetRemainingCalls(),
-			"enabled":         m.isModelEnabled(name),
+			"name":      provider.GetName(),
+			"available": isAvailable,
 		}
 	}
 

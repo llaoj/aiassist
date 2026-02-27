@@ -64,6 +64,13 @@ func initializeSession() (*interactive.Session, *i18n.I18n) {
 		}
 	}
 
+	// Check if any models were actually registered
+	if len(manager.GetStatus()) == 0 {
+		color.Red(translator.T("error.no_models") + "\n")
+		color.Red(translator.T("error.hint_no_models") + "\n")
+		os.Exit(1)
+	}
+
 	return interactive.NewSession(manager, translator), translator
 }
 

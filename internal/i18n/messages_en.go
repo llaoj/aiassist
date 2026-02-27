@@ -91,8 +91,6 @@ var EnglishMessages = map[string]string{
 	"llm.status_title":       "Current Model Status",
 	"llm.status_available":   "✓ Available",
 	"llm.status_unavailable": "✗ Unavailable",
-	"llm.remaining_calls":    "Remaining Calls",
-	"llm.priority":           "Priority",
 
 	// UI messages
 	"ui.ctrlc_exit_hint":      "Press Ctrl+C again to exit",

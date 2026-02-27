@@ -95,8 +95,6 @@ var ChineseMessages = map[string]string{
 	"llm.status_title":       "当前模型状态",
 	"llm.status_available":   "✓ 可用",
 	"llm.status_unavailable": "✗ 不可用",
-	"llm.remaining_calls":    "剩余额度",
-	"llm.priority":           "优先级",
 
 	// UI messages
 	"ui.ctrlc_exit_hint":    "再按一次 Ctrl+C 退出程序",

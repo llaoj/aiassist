@@ -180,13 +180,13 @@ $ tail -1000 /var/log/nginx/access.log | aiassist "分析访问日志"
 ```
 [请求] → [Qwen]     ✗ 失败 (超时)
           ↓
-        [GPT-4]    ✗ 失败 (限额)
+        [GPT-4]    ✗ 失败 (错误)
           ↓
         [DeepSeek] ✓ 成功
 
 终端提示：
 ⚠ Qwen 不可用，切换到 GPT-4
-⚠ GPT-4 额度不足，切换到 DeepSeek
+⚠ GPT-4 不可用，切换到 DeepSeek
 ✓ 使用模型: DeepSeek
 ```
 **风格**：流程图配终端截图

@@ -10,5 +10,4 @@ type ModelProvider interface {
 	Call(ctx context.Context, prompt string) (string, error)
 	GetName() string
 	IsAvailable() bool
-	GetRemainingCalls() int
 }

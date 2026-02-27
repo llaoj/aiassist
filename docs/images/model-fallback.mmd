@@ -20,13 +20,13 @@ sequenceDiagram
         Note over M,G: 自动切换到第二优先级
         M->>S: ⚠️ 提示: Qwen不可用,切换到GPT-4
         M->>G: 调用API
-        G--xM: ❌ 额度不足 (quota exceeded)
+        G--xM: ❌ 调用失败 (error)
         Note over M: GPT-4不可用
     end
-    
+
     rect rgb(255, 182, 193)
         Note over M,D: 自动切换到第三优先级
-        M->>S: ⚠️ 提示: GPT-4额度不足,切换到DeepSeek
+        M->>S: ⚠️ 提示: GPT-4不可用,切换到DeepSeek
         M->>D: 调用API
         D->>M: ✓ 返回响应
         Note over M: DeepSeek可用

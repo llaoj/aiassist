@@ -103,10 +103,6 @@ func (o *OpenAICompatibleProvider) IsAvailable() bool {
 	return o.available
 }
 
-func (o *OpenAICompatibleProvider) GetRemainingCalls() int {
-	return 0 // No longer tracking quota
-}
-
 func (o *OpenAICompatibleProvider) Call(ctx context.Context, prompt string) (string, error) {
 	return o.CallWithSystemPrompt(ctx, "", prompt)
 }
