@@ -96,23 +96,6 @@ func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt
 	return "", "", fmt.Errorf("all model calls failed")
 }
 
-// CallSpecific calls a specific model
-func (m *Manager) CallSpecific(ctx context.Context, modelName string, prompt string) (string, error) {
-	m.mu.RLock()
-	provider, exists := m.providers[modelName]
-	m.mu.RUnlock()
-
-	if !exists {
-		return "", fmt.Errorf("model %s does not exist", modelName)
-	}
-
-	if !provider.IsAvailable() {
-		return "", fmt.Errorf("model %s quota exhausted or unavailable", modelName)
-	}
-
-	return provider.Call(ctx, prompt)
-}
-
 func (m *Manager) getAvailableProviders() []string {
 	var available []string
 
@@ -166,15 +149,6 @@ func (m *Manager) GetStatus() map[string]map[string]interface{} {
 	}
 
 	return status
-}
-
-func (m *Manager) ResetDailyQuota() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// In the new architecture, provider quota management is handled by the LLM API service
-	// This method is reserved for future expansion
-	return m.config.Save()
 }
 
 func (m *Manager) PrintStatus() {

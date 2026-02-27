@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func LoadFromConsul(consulCfg *ConsulConfig) (*Config, error) {
+func createConsulClient(consulCfg *ConsulConfig) (*api.Client, error) {
 	config := api.DefaultConfig()
 	config.Address = consulCfg.Address
 
@@ -18,6 +18,15 @@ func LoadFromConsul(consulCfg *ConsulConfig) (*Config, error) {
 	client, err := api.NewClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create consul client: %w", err)
+	}
+
+	return client, nil
+}
+
+func LoadFromConsul(consulCfg *ConsulConfig) (*Config, error) {
+	client, err := createConsulClient(consulCfg)
+	if err != nil {
+		return nil, err
 	}
 
 	kv := client.KV()
@@ -42,16 +51,9 @@ func LoadFromConsul(consulCfg *ConsulConfig) (*Config, error) {
 }
 
 func SaveToConsul(consulCfg *ConsulConfig, cfg *Config) error {
-	config := api.DefaultConfig()
-	config.Address = consulCfg.Address
-
-	if consulCfg.Token != "" {
-		config.Token = consulCfg.Token
-	}
-
-	client, err := api.NewClient(config)
+	client, err := createConsulClient(consulCfg)
 	if err != nil {
-		return fmt.Errorf("failed to create consul client: %w", err)
+		return err
 	}
 
 	data, err := yaml.Marshal(cfg)

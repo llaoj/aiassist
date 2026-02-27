@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/llaoj/aiassist/internal/config"
 	"github.com/llaoj/aiassist/internal/ui"
@@ -68,7 +69,13 @@ func viewConfig() {
 			}
 			fmt.Printf("%d. %s [%s]\n", i+1, p.Name, status)
 			fmt.Printf("   Base URL: %s\n", p.BaseURL)
-			fmt.Printf("   API Key: %s...%s\n", p.APIKey[:8], p.APIKey[len(p.APIKey)-4:])
+			if len(p.APIKey) >= 12 {
+				fmt.Printf("   API Key: %s...%s\n", p.APIKey[:8], p.APIKey[len(p.APIKey)-4:])
+			} else if len(p.APIKey) > 0 {
+				fmt.Printf("   API Key: %s\n", strings.Repeat("*", len(p.APIKey)))
+			} else {
+				fmt.Printf("   API Key: (not set)\n")
+			}
 			fmt.Printf("   Models:\n")
 
 			for _, modelCfg := range p.Models {

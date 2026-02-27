@@ -36,10 +36,6 @@ func (i *I18n) T(key string, args ...interface{}) string {
 	return msg
 }
 
-func (i *I18n) SetLanguage(language string) {
-	i.language = language
-}
-
 func (i *I18n) GetLanguage() string {
 	return i.language
 }

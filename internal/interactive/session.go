@@ -18,6 +18,24 @@ import (
 	"github.com/llaoj/aiassist/internal/ui"
 )
 
+const (
+	// MaxPipeDataBytes limits pipe input to ~1.6MB
+	// Based on mainstream LLM context windows (2026):
+	// - DeepSeek-V3: 64K tokens
+	// - GPT-4/Qwen: 128K tokens
+	// - Claude 3.5: 200K tokens
+	// - Gemini 1.5: 1M tokens
+	// For nginx logs (~3.5 chars/token):
+	// 400K chars ≈ 114K tokens ≈ 13,000 lines of nginx access logs
+	MaxPipeDataBytes = 400000 * 4
+
+	// MaxPipeDataChars limits pipe data display to ~400k characters
+	MaxPipeDataChars = 400000
+
+	// MaxOutputChars limits command output display in interactive mode
+	MaxOutputChars = 100000
+)
+
 // Common errors
 var (
 	ErrUserAbort = ui.ErrUserAbort
@@ -206,25 +224,13 @@ func (s *Session) displayResponse(modelUsed, response string) {
 }
 
 func (s *Session) RunWithPipe(initialQuestion string) error {
-	// Read pipe data with memory limit to prevent exhaustion
-	// Based on mainstream LLM context windows (2026):
-	// - DeepSeek-V3: 64K tokens
-	// - GPT-4/Qwen: 128K tokens
-	// - Claude 3.5: 200K tokens
-	// - Gemini 1.5: 1M tokens
-	//
-	// For nginx logs (~3.5 chars/token):
-	// 400K chars ≈ 114K tokens ≈ 13,000 lines of nginx access logs
-	// Fits comfortably in most models with room for system prompt & history
-	const maxPipeDataBytes = 400000 * 4 // ~1.6MB, supports ~13k lines of nginx logs
-	limitedReader := io.LimitReader(os.Stdin, maxPipeDataBytes)
+	limitedReader := io.LimitReader(os.Stdin, MaxPipeDataBytes)
 	pipeData, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return err
 	}
 
-	const maxPipeDataChars = 400000
-	truncatedPipeData := s.truncateOutput(string(pipeData), maxPipeDataChars)
+	truncatedPipeData := s.truncateOutput(string(pipeData), MaxPipeDataChars)
 
 	var pipeMsg string
 	if initialQuestion != "" {
@@ -379,8 +385,7 @@ func (s *Session) truncateOutput(output string, maxChars int) string {
 }
 
 func (s *Session) analyzeCommandOutput(cmd, output string) error {
-	const maxOutputChars = 100000
-	truncatedOutput := s.truncateOutput(output, maxOutputChars)
+	truncatedOutput := s.truncateOutput(output, MaxOutputChars)
 
 	executionMsg := fmt.Sprintf("[%s]\n%s\n\n[%s]\n%s",
 		s.translator.T("interactive.executed_command"), cmd,
