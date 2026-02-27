@@ -44,6 +44,7 @@ var ChineseMessages = map[string]string{
 
 	// Interactive mode messages
 	"interactive.welcome":              "欢迎使用 AI Shell Assistant",
+	"interactive.exit_hint":            "提示: 随时按 Ctrl+C 退出",
 	"interactive.input_prompt":         "请输入问题: ",
 	"interactive.goodbye":              "再见！",
 	"interactive.commands_found":       "发现以下建议命令:",

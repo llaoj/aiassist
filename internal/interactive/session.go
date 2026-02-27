@@ -21,6 +21,7 @@ import (
 var (
 	ErrUserAbort = ui.ErrUserAbort
 	ErrUserExit  = ui.ErrUserExit
+	ErrUserDone  = ui.ErrUserDone
 )
 
 // SessionMessage represents a message in the session
@@ -79,6 +80,7 @@ func (s *Session) Run(initialQuestion string) (err error) {
 	// Display welcome message
 	color.Cyan(ui.Separator() + "\n")
 	color.Cyan(s.translator.T("interactive.welcome") + "\n")
+	color.Cyan(s.translator.T("interactive.exit_hint") + "\n")
 	color.Cyan(ui.Separator() + "\n")
 
 	// Print current model status
@@ -86,7 +88,8 @@ func (s *Session) Run(initialQuestion string) (err error) {
 
 	// If initial question is provided, process it first
 	if initialQuestion != "" {
-		color.Yellow("[%s]: %s\n", s.translator.T("interactive.user_label"), initialQuestion)
+		fmt.Println()
+		fmt.Printf("[%s]: %s\n", s.translator.T("interactive.user_label"), initialQuestion)
 
 		if err := s.processQuestion(initialQuestion); err != nil {
 			return err
@@ -177,8 +180,6 @@ func (s *Session) processQuestion(userInput string) error {
 	}
 
 	s.history = append(s.history, SessionMessage{Role: "assistant", Content: response})
-	// Print empty line before displaying response
-	fmt.Println()
 	s.displayResponse(modelUsed, response)
 
 	commands := s.executor.ExtractCommands(response)
@@ -203,8 +204,11 @@ func (s *Session) callLLM(systemPrompt string) (response string, modelUsed strin
 
 // displayResponse displays AI response with model name
 func (s *Session) displayResponse(modelUsed, response string) {
-	color.Cyan("[%s]: \n", modelUsed)
-	color.Cyan("%s\n\n", response)
+	// Trim leading and trailing whitespace/newlines from response to avoid extra blank lines
+	response = strings.TrimSpace(response)
+	fmt.Println()
+	fmt.Printf("[%s]:\n", modelUsed)
+	fmt.Printf("%s\n", response)
 	// Flush to ensure output appears immediately in pipe mode
 	os.Stdout.Sync()
 }
@@ -294,7 +298,7 @@ func (s *Session) runInteractiveLoop() error {
 
 		// Process the question
 		if err := s.processQuestion(userInput); err != nil {
-			if errors.Is(err, ErrUserAbort) || errors.Is(err, ErrUserExit) {
+			if errors.Is(err, ErrUserAbort) || errors.Is(err, ErrUserExit) || errors.Is(err, ErrUserDone) {
 				return err
 			}
 			color.Red("Error: %v\n", err)
@@ -325,6 +329,7 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 	// Process each command one by one
 	for _, cmd := range commands {
 		// Display command
+		fmt.Println()
 		s.executor.DisplayCommand(cmd.Text, cmd.Type, s.translator)
 
 		// Get user confirmation
@@ -349,18 +354,15 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 		}
 
 		// Print command output after spinner stops
-		// Print empty line before output
-		fmt.Println()
 		fmt.Printf("[%s]:\n", s.translator.T("interactive.execution_output"))
-		fmt.Print(output)
 
 		if err != nil {
-			color.Red(s.translator.T("executor.execute_failed", err) + "\n")
+			color.Red(s.translator.T("executor.execute_failed", err))
 			continue
 		}
 
 		// Show execution success message
-		color.Green(s.translator.T("executor.execute_success") + "\n")
+		color.Green(s.translator.T("executor.execute_success"))
 		fmt.Println()
 
 		// Record first executed command
@@ -375,7 +377,7 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 
 	// If no command was executed (all skipped), show message and return to let caller continue
 	if !executedAny {
-		// color.Yellow(s.translator.T("interactive.all_commands_skipped") + "\n")
+		fmt.Println()
 		color.Green(s.translator.T("interactive.analysis_complete") + "\n")
 		return nil
 	}
@@ -437,15 +439,7 @@ func (s *Session) analyzeCommandOutput(cmd, output string) error {
 		return s.handleCommands(newCommands)
 	}
 
-	// Ask if user wants to continue
-	confirmed, err := s.askConfirmation(s.translator.T("interactive.all_steps_complete"))
-	if err != nil {
-		return err
-	}
-	if confirmed {
-		return nil // Continue to main loop
-	}
-	// User chose 'n', exit program
-	color.Cyan(s.translator.T("interactive.goodbye") + "\n")
-	return ErrUserExit
+	fmt.Println()
+	color.Green(s.translator.T("interactive.analysis_complete") + "\n")
+	return nil
 }

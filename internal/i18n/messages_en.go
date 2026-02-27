@@ -44,6 +44,7 @@ var EnglishMessages = map[string]string{
 
 	// Interactive mode messages
 	"interactive.welcome":              "Welcome to AI Shell Assistant",
+	"interactive.exit_hint":            "Tip: Press Ctrl+C anytime to exit",
 	"interactive.input_prompt":         "Please enter your question: ",
 	"interactive.goodbye":              "Goodbye!",
 	"interactive.commands_found":       "Found suggested commands:",

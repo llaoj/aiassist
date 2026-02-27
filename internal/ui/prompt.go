@@ -16,6 +16,7 @@ import (
 var (
 	ErrUserAbort = errors.New("user aborted")
 	ErrUserExit  = errors.New("user exit")
+	ErrUserDone  = errors.New("user chose to exit") // User chose "No" to exit
 )
 
 // inputModel is a custom text input model using bubbletea
