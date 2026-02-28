@@ -89,9 +89,10 @@ var EnglishMessages = map[string]string{
 	"version.build_date": "Build Date: %s",
 
 	// Model status messages
-	"llm.status_title":       "Current Model Status",
+	"llm.status_title":       "Current Model",
 	"llm.status_available":   "✓ Available",
 	"llm.status_unavailable": "✗ Unavailable",
+	"llm.status_default":     "(Default)",
 
 	// UI messages
 	"ui.ctrlc_exit_hint":      "Press Ctrl+C again to exit",

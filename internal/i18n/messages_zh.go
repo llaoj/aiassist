@@ -93,9 +93,10 @@ var ChineseMessages = map[string]string{
 	"version.build_date": "构建日期: %s",
 
 	// Model status messages
-	"llm.status_title":       "当前模型状态",
+	"llm.status_title":       "当前模型",
 	"llm.status_available":   "✓ 可用",
 	"llm.status_unavailable": "✗ 不可用",
+	"llm.status_default":     "(默认)",
 
 	// UI messages
 	"ui.ctrlc_exit_hint":    "再按一次 Ctrl+C 退出程序",

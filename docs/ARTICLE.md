@@ -249,9 +249,9 @@ $ aiassist
 欢迎使用 AI Shell Assistant
 -----------------------------------
 
-[当前模型状态]
-- bailian/qwen-max: ✓ 可用
-- bailian/qwen-plus: ✓ 可用
+[当前模型]
+- bailian/qwen-max (默认)
+- bailian/qwen-plus
 
 ??? 请输入问题: 为啥服务器负载偶尔很高
 
@@ -528,8 +528,8 @@ $ aiassist
 欢迎使用 AI Shell Assistant
 -----------------------------------
 
-[当前模型状态]
-- bailian/qwen-max: ✓ 可用
+[当前模型]
+- bailian/qwen-max (默认)
 
 ??? 请输入问题: 
 

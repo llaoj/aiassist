@@ -119,7 +119,15 @@ func (m *Manager) PrintStatus() {
 
 	fmt.Println("\n[" + m.translator.T("llm.status_title") + "]")
 
+	// Get the default model
+	defaultModel := m.config.GetDefaultModel()
+
 	for modelName := range status {
-		fmt.Printf("- %s\n", modelName)
+		// Check if this is the default model
+		if defaultModel != "" && modelName == defaultModel {
+			fmt.Printf("- %s %s\n", modelName, m.translator.T("llm.status_default"))
+		} else {
+			fmt.Printf("- %s\n", modelName)
+		}
 	}
 }
