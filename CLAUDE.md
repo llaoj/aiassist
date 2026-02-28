@@ -52,11 +52,11 @@ make clean
 - Thread-safe with mutex protection for concurrent access
 
 **LLM Manager**: `internal/llm/`
-- Manages multiple LLM providers (OpenAI, Alibaba Qwen, custom OpenAI-compatible APIs)
-- Automatic fallback: tries providers in config file order when one fails
+- Manages multiple LLM models across different providers (OpenAI, Alibaba Qwen, custom OpenAI-compatible APIs)
+- Automatic fallback: tries models in config file order when one fails
 - Tracks model availability (marks unavailable on HTTP errors)
-- `manager.go`: Provider lifecycle and fallback logic
-- `openai_compatible.go`: Generic OpenAI API client implementation
+- `manager.go`: Model lifecycle and fallback logic
+- `openai_compatible.go`: Generic OpenAI API model implementation
 
 **Interactive Session**: `internal/interactive/session.go`
 - Maintains conversation history with system/user/assistant messages

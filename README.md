@@ -492,7 +492,7 @@ aiassist/
 │   ├── i18n/              # 国际化
 │   ├── interactive/       # 交互会话
 │   ├── llm/               # LLM 管理器
-│   │   ├── manager.go    # Provider 管理
+│   │   ├── manager.go    # Model 管理
 │   │   └── openai_compatible.go # OpenAI 兼容接口
 │   ├── prompt/            # 系统提示词
 │   ├── sysinfo/           # 系统信息收集

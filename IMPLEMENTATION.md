@@ -18,7 +18,7 @@ aiassist/
 │   ├── config/
 │   │   └── config.go            # 配置管理和持久化
 │   ├── llm/
-│   │   ├── provider.go          # LLM 提供商接口和实现
+│   │   ├── model.go             # LLM 模型接口定义
 │   │   └── manager.go           # LLM 管理器 - 多模型切换
 │   ├── executor/
 │   │   └── executor.go          # 命令执行和分类
@@ -37,9 +37,10 @@ aiassist/
 - 自动校验 API Key 有效性
 - 每日调用次数追踪和自动重置
 
-### 2. **LLM 提供商** (`internal/llm/`)
-- `provider.go` - 支持三个模型：通义千问、ChatGPT、DeepSeek
-- `manager.go` - 管理多个提供商的生命周期和自动切换
+### 2. **LLM 模型** (`internal/llm/`)
+- `model.go` - LLM 模型接口定义
+- `openai_compatible.go` - OpenAI 兼容模型实现
+- `manager.go` - 管理多个模型的生命周期和自动切换
   - 优先级管理
   - 自动故障转移
   - 额度监控

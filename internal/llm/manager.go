@@ -13,7 +13,7 @@ import (
 
 // Manager manages the lifecycle of multiple LLM models
 type Manager struct {
-	models     []ModelProvider // Ordered list of models from config file
+	models     []Model // Ordered list of models from config file
 	mu         sync.RWMutex
 	config     *config.Config
 	translator *i18n.I18n
@@ -21,13 +21,13 @@ type Manager struct {
 
 func NewManager(cfg *config.Config) *Manager {
 	return &Manager{
-		models:     make([]ModelProvider, 0),
+		models:     make([]Model, 0),
 		config:     cfg,
 		translator: i18n.New(cfg.GetLanguage()),
 	}
 }
 
-func (m *Manager) RegisterModel(model ModelProvider) {
+func (m *Manager) RegisterModel(model Model) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -41,7 +41,7 @@ func (m *Manager) RegisterModel(model ModelProvider) {
 	// If this is the default model, insert at the beginning
 	defaultModel := m.config.GetDefaultModel()
 	if defaultModel != "" && model.GetName() == defaultModel {
-		m.models = append([]ModelProvider{model}, m.models...)
+		m.models = append([]Model{model}, m.models...)
 		return
 	}
 
@@ -77,7 +77,7 @@ func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt
 		stopSpinner := ui.StartSpinner(m.translator.T("interactive.thinking"))
 
 		// If model supports system prompt, use the version with system prompt
-		if compatModel, ok := model.(*OpenAICompatibleProvider); ok && systemPrompt != "" {
+		if compatModel, ok := model.(*OpenAICompatibleModel); ok && systemPrompt != "" {
 			response, err = compatModel.CallWithSystemPrompt(ctx, systemPrompt, userPrompt)
 		} else {
 			response, err = model.Call(ctx, userPrompt)

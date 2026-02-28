@@ -45,7 +45,7 @@ func initializeSession() (*interactive.Session, *i18n.I18n) {
 			}
 
 			modelKey := fmt.Sprintf("%s/%s", provider.Name, modelCfg.Name)
-			llmModel := llm.NewOpenAICompatibleProvider(
+			llmModel := llm.NewOpenAICompatibleModel(
 				modelKey,
 				provider.BaseURL,
 				provider.APIKey,

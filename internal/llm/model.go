@@ -4,8 +4,8 @@ import (
 	"context"
 )
 
-// ModelProvider defines the LLM model provider interface
-type ModelProvider interface {
+// Model defines the LLM model interface
+type Model interface {
 	// Call sends an API request
 	Call(ctx context.Context, prompt string) (string, error)
 	GetName() string

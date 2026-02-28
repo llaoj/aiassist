@@ -13,9 +13,9 @@ import (
 	"time"
 )
 
-// OpenAICompatibleProvider is a universal provider for OpenAI-compatible APIs
+// OpenAICompatibleModel is a universal model for OpenAI-compatible APIs
 // This can work with any LLM service that implements the OpenAI API standard
-type OpenAICompatibleProvider struct {
+type OpenAICompatibleModel struct {
 	name       string
 	baseURL    string
 	apiKey     string
@@ -45,7 +45,7 @@ type choice struct {
 	Message chatMessage `json:"message"`
 }
 
-func NewOpenAICompatibleProvider(name, baseURL, apiKey, modelName string) *OpenAICompatibleProvider {
+func NewOpenAICompatibleModel(name, baseURL, apiKey, modelName string) *OpenAICompatibleModel {
 	transport := &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout:   10 * time.Second,
@@ -67,7 +67,7 @@ func NewOpenAICompatibleProvider(name, baseURL, apiKey, modelName string) *OpenA
 		Transport: transport,
 	}
 
-	return &OpenAICompatibleProvider{
+	return &OpenAICompatibleModel{
 		name:       name,
 		baseURL:    baseURL,
 		apiKey:     apiKey,
@@ -76,10 +76,10 @@ func NewOpenAICompatibleProvider(name, baseURL, apiKey, modelName string) *OpenA
 	}
 }
 
-// SetProxyFunc configures proxy function for the provider
+// SetProxyFunc configures proxy function for the model
 // Use http.ProxyFromEnvironment for automatic environment-based proxy selection
 // or http.ProxyURL for a fixed proxy URL
-func (o *OpenAICompatibleProvider) SetProxyFunc(proxyFunc func(*http.Request) (*url.URL, error)) error {
+func (o *OpenAICompatibleModel) SetProxyFunc(proxyFunc func(*http.Request) (*url.URL, error)) error {
 	if proxyFunc == nil {
 		return nil
 	}
@@ -93,15 +93,15 @@ func (o *OpenAICompatibleProvider) SetProxyFunc(proxyFunc func(*http.Request) (*
 	return nil
 }
 
-func (o *OpenAICompatibleProvider) GetName() string {
+func (o *OpenAICompatibleModel) GetName() string {
 	return o.name
 }
 
-func (o *OpenAICompatibleProvider) Call(ctx context.Context, prompt string) (string, error) {
+func (o *OpenAICompatibleModel) Call(ctx context.Context, prompt string) (string, error) {
 	return o.CallWithSystemPrompt(ctx, "", prompt)
 }
 
-func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, systemPrompt string, userPrompt string) (string, error) {
+func (o *OpenAICompatibleModel) CallWithSystemPrompt(ctx context.Context, systemPrompt string, userPrompt string) (string, error) {
 	messages := []chatMessage{}
 
 	if systemPrompt != "" {
