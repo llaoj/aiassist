@@ -1,10 +1,10 @@
 package ui
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -12,12 +12,8 @@ import (
 	"github.com/llaoj/aiassist/internal/i18n"
 )
 
-// Common errors
-var (
-	ErrUserAbort = errors.New("user aborted")
-	ErrUserExit  = errors.New("user exit")
-	ErrUserDone  = errors.New("user chose to exit") // User chose "No" to exit
-)
+// Common errors - no longer needed since all exits trigger SIGINT
+// Removed: ErrUserAbort, ErrUserExit, ErrUserDone
 
 // inputModel is a custom text input model using bubbletea
 type inputModel struct {
@@ -51,8 +47,9 @@ func (m inputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			return m, tea.Quit
 		case tea.KeyCtrlC, tea.KeyEsc:
-			m.quitting = true
-			m.err = ErrUserAbort
+			// Send SIGINT to trigger global interrupt handler
+			// This unifies all exit logic in one place
+			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 			return m, tea.Quit
 		}
 	}
@@ -97,8 +94,9 @@ func (m selectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			return m, tea.Quit
 		case tea.KeyCtrlC, tea.KeyEsc:
-			m.quitting = true
-			m.err = ErrUserAbort
+			// Send SIGINT to trigger global interrupt handler
+			// This unifies all exit logic in one place
+			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 			return m, tea.Quit
 		case tea.KeyUp, tea.KeyLeft:
 			if m.selected > 0 {

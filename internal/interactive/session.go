@@ -2,11 +2,11 @@ package interactive
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/fatih/color"
 	"github.com/llaoj/aiassist/internal/executor"
@@ -33,13 +33,6 @@ const (
 	// 400K chars ≈ 114K tokens ≈ 13,000 lines of nginx access logs
 	// This limit applies to both pipe data and command output uniformly
 	MaxContextChars = 400000
-)
-
-// Common errors
-var (
-	ErrUserAbort = ui.ErrUserAbort
-	ErrUserExit  = ui.ErrUserExit
-	ErrUserDone  = ui.ErrUserDone
 )
 
 // SessionMessage represents a message in the session
@@ -119,10 +112,6 @@ func (s *Session) Run(initialQuestion string) (err error) {
 func (s *Session) readUserInput(prompt string) (string, error) {
 	input, err := ui.PromptInput(prompt, s.translator)
 	if err != nil {
-		if errors.Is(err, ui.ErrUserAbort) {
-			// User pressed Ctrl+C - return error to trigger exit
-			return "", err
-		}
 		return "", err
 	}
 
@@ -153,10 +142,6 @@ func (s *Session) confirmCommandExecution(cmdType executor.CommandType) (bool, e
 func (s *Session) askConfirmation(prompt string) (bool, error) {
 	confirmed, err := ui.PromptConfirm(prompt, s.translator)
 	if err != nil {
-		if errors.Is(err, ui.ErrUserAbort) {
-			// User pressed Ctrl+C - return error to trigger exit
-			return false, err
-		}
 		return false, err
 	}
 
@@ -264,14 +249,12 @@ func (s *Session) runInteractiveLoop() error {
 		prompt := s.translator.T("interactive.input_prompt")
 		userInput, err := s.readUserInput(prompt)
 		if err != nil {
-			if errors.Is(err, ErrUserAbort) {
-				// User pressed Ctrl+C
-				return ErrUserExit
-			}
 			if err == io.EOF {
-				// EOF (Ctrl+D)
-				color.Cyan("\n" + s.translator.T("interactive.goodbye") + "\n")
-				return ErrUserExit
+				// EOF (Ctrl+D) - send SIGINT to trigger global handler
+				fmt.Println()
+				fmt.Println(s.translator.T("interactive.goodbye"))
+				syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+				return nil
 			}
 			color.Red("Error: %v\n", err)
 			continue
@@ -285,9 +268,6 @@ func (s *Session) runInteractiveLoop() error {
 		fmt.Println(userInput)
 
 		if err := s.processQuestion(userInput); err != nil {
-			if errors.Is(err, ErrUserAbort) || errors.Is(err, ErrUserExit) || errors.Is(err, ErrUserDone) {
-				return err
-			}
 			color.Red("Error: %v\n", err)
 			continue
 		}

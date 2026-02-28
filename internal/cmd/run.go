@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -80,30 +79,18 @@ func runInteractiveMode(initialQuestion string) {
 	err := session.Run(initialQuestion)
 	if err != nil {
 		fmt.Println()
-		if errors.Is(err, interactive.ErrUserDone) {
-			fmt.Println(translator.T("interactive.goodbye"))
-			return
-		}
-		if errors.Is(err, interactive.ErrUserExit) || errors.Is(err, interactive.ErrUserAbort) {
-			// Global interrupt handler already printed exit message
-			return
-		}
 		color.Red(translator.T("error.general", err) + "\n")
 		os.Exit(1)
 	}
 }
 
 func runPipeMode(initialQuestion string) {
-	session, translator := initializeSession()
+	session, _ := initializeSession()
 
 	err := session.RunWithPipe(initialQuestion)
 	if err != nil {
 		fmt.Println()
-		if errors.Is(err, interactive.ErrUserExit) || errors.Is(err, interactive.ErrUserAbort) {
-			// Global interrupt handler already printed exit message
-			return
-		}
-		color.Red(translator.T("error.general", err) + "\n")
+		color.Red("Error: %v\n", err)
 		os.Exit(1)
 	}
 }

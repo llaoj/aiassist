@@ -1,13 +1,11 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
 	"github.com/llaoj/aiassist/internal/cmd"
 	"github.com/llaoj/aiassist/internal/config"
-	"github.com/llaoj/aiassist/internal/interactive"
 )
 
 // Version, Commit and BuildDate are injected at build time via ldflags
@@ -39,11 +37,6 @@ func main() {
 	cmd.SetupInterruptHandler(cfg.GetLanguage())
 
 	if err := cmd.Execute(); err != nil {
-		// Check if it's a user exit (normal termination)
-		if errors.Is(err, interactive.ErrUserExit) {
-			// Normal exit, no error message needed
-			return
-		}
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
