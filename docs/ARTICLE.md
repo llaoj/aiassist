@@ -142,7 +142,9 @@ AI Shell Assistant 采用模块化架构设计，主要包含以下核心组件�
 ```bash
 $ aiassist "当前服务器占用资源最多的服务是什么?"
 
-[bailian/qwen-max]
+[用户]: 当前服务器占用资源最多的服务是什么?
+
+[bailian/qwen-max]:
 你想要知道当前系统上占用资源最多的服务是什么。
 要找出占用资源最多的服务，我们可以查看CPU和内存使用情况。
 
@@ -152,8 +154,11 @@ $ aiassist "当前服务器占用资源最多的服务是什么?"
 查询命令:
 ps -axww -o pid,%cpu,%mem,comm | sort -k2 -nr | head -n 10
 
-是否执行此命令? (y/n, exit退出): y
+是否执行此命令?
+> Yes
+  No
 
+[执行输出]:
   161  19.7  0.6 /System/Library/.../WindowServer
 16267  15.9  1.4 /Applications/Google Chrome.app/.../Renderer
   591  13.0  0.7 /Applications/Google Chrome.app/.../Helper
@@ -161,15 +166,17 @@ ps -axww -o pid,%cpu,%mem,comm | sort -k2 -nr | head -n 10
 
 ✓ 执行成功
 
-[bailian/qwen-max]
+[bailian/qwen-max]:
 占用资源最多的服务是WindowServer，其PID为161，CPU使用率为19.7%。
 其次是Google Chrome相关的进程。
 
-所有分析步骤已完成。是否继续提问? (y/n): y
+✓ 所有分析已完成
 
-??? 请输入问题: 如何关闭这个服务?
+请输入问题: 如何关闭这个服务?
 
-[bailian/qwen-max]
+[用户]: 如何关闭这个服务?
+
+[bailian/qwen-max]:
 WindowServer是macOS中负责图形界面的核心服务，直接关闭它会导致
 系统失去图形界面显示能力。如果你想暂时释放资源，可以尝试强制退出。
 
@@ -179,10 +186,13 @@ WindowServer是macOS中负责图形界面的核心服务，直接关闭它会导
 !!! 修改命令 (需要确认):
 sudo kill -9 161
 
-是否执行此命令? (y/n, exit退出): y
+是否执行此命令?
+> Yes
+  No
 
-!!! 警告: 该命令将修改服务器配置，是否确定执行? (y/n, exit退出):
-^C
+!!! 警告: 该命令将修改服务器配置，是否确定执行?
+  Yes
+> No
 ```
 
 ### 场景2：管道模式分析日志
@@ -194,7 +204,7 @@ sudo kill -9 161
 # 分析系统日志
 $ tail -n300 /var/log/messages | aiassist "分析下当前服务器有没有异常"
 
-[bailian/qwen-max]
+[bailian/qwen-max]:
 ### 总结输出
 从提供的日志来看，系统存在多个问题，主要集中在以下几个方面：
 
@@ -247,15 +257,18 @@ $ aiassist
 
 -----------------------------------
 欢迎使用 AI Shell Assistant
+提示: 随时按 Ctrl+C 退出
 -----------------------------------
 
 [当前模型]
 - bailian/qwen-max (默认)
 - bailian/qwen-plus
 
-??? 请输入问题: 为啥服务器负载偶尔很高
+请输入问题: 为啥服务器负载偶尔很高
 
-[bailian/qwen-max]
+[用户]: 为啥服务器负载偶尔很高
+
+[bailian/qwen-max]:
 你提到服务器负载偶尔很高，这可能是由于某个服务或进程在特定时间点
 消耗了大量资源导致的。
 
@@ -271,12 +284,15 @@ $ aiassist
 查询命令:
 uptime
 
-是否执行此命令? (y/n, exit退出): y
+是否执行此命令?
+> Yes
+  No
 
+[执行输出]:
  13:12:59 up 237 days, 22:48,  2 users,  load average: 2.19, 1.72, 1.86
 ✓ 执行成功
 
-[bailian/qwen-max]
+[bailian/qwen-max]:
 当前系统平均负载较高。继续检查CPU使用率最高的前几个进程。
 
 [cmd:query] ps -eo pid,%cpu,%mem,comm --sort=-%cpu | head -n 10
@@ -284,8 +300,11 @@ uptime
 查询命令:
 ps -eo pid,%cpu,%mem,comm --sort=-%cpu | head -n 10
 
-是否执行此命令? (y/n, exit退出): y
+是否执行此命令?
+> Yes
+  No
 
+[执行输出]:
   PID %CPU %MEM COMMAND
 30440 45.9  4.8 pilot-discovery
 14632  7.6  0.1 process-exporte
@@ -293,7 +312,7 @@ ps -eo pid,%cpu,%mem,comm --sort=-%cpu | head -n 10
 33519  6.4  0.8 kubelet
 ✓ 执行成功
 
-[bailian/qwen-max]
+[bailian/qwen-max]:
 pilot-discovery进程消耗了大量CPU资源(45.9%)，可能是导致服务器
 负载高的原因。建议进一步检查该进程的详细信息和相关日志。
 
@@ -306,8 +325,9 @@ pilot-discovery进程消耗了大量CPU资源(45.9%)，可能是导致服务器
 查询命令:
 ps -p 30440 -ww -o pid,ppid,%cpu,%mem,comm
 
-是否执行此命令? (y/n, exit退出): 
-^C
+是否执行此命令?
+  Yes
+> No
 ```
 
 ## 技术亮点
