@@ -199,6 +199,12 @@ func (c *Config) GetEnabledProviders() []*ProviderConfig {
 	return enabled
 }
 
+func (c *Config) GetDefaultModel() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.DefaultModel
+}
+
 func (c *Config) GetAllProviders() []*ProviderConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -215,7 +221,7 @@ func (c *Config) DeleteProvider(providerName string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.Providers == nil || len(c.Providers) == 0 {
+	if len(c.Providers) == 0 {
 		return fmt.Errorf("no providers configured")
 	}
 

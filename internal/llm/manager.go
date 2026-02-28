@@ -11,40 +11,42 @@ import (
 	"github.com/llaoj/aiassist/internal/ui"
 )
 
-// Manager manages the lifecycle of multiple LLM providers
+// Manager manages the lifecycle of multiple LLM models
 type Manager struct {
-	providers     map[string]ModelProvider
-	providerOrder []string // Order of providers from config file
-	mu            sync.RWMutex
-	config        *config.Config
-	translator    *i18n.I18n
+	models     []ModelProvider // Ordered list of models from config file
+	mu         sync.RWMutex
+	config     *config.Config
+	translator *i18n.I18n
 }
 
 func NewManager(cfg *config.Config) *Manager {
 	return &Manager{
-		providers:     make(map[string]ModelProvider),
-		providerOrder: make([]string, 0),
-		config:        cfg,
-		translator:    i18n.New(cfg.GetLanguage()),
+		models:     make([]ModelProvider, 0),
+		config:     cfg,
+		translator: i18n.New(cfg.GetLanguage()),
 	}
 }
 
-func (m *Manager) RegisterProvider(name string, provider ModelProvider) {
+func (m *Manager) RegisterModel(model ModelProvider) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.providers[name] = provider
-	// Add to order if not already present
-	found := false
-	for _, n := range m.providerOrder {
-		if n == name {
-			found = true
-			break
+	// Check if model already exists
+	for _, existing := range m.models {
+		if existing.GetName() == model.GetName() {
+			return
 		}
 	}
-	if !found {
-		m.providerOrder = append(m.providerOrder, name)
+
+	// If this is the default model, insert at the beginning
+	defaultModel := m.config.GetDefaultModel()
+	if defaultModel != "" && model.GetName() == defaultModel {
+		m.models = append([]ModelProvider{model}, m.models...)
+		return
 	}
+
+	// Otherwise, append to the end
+	m.models = append(m.models, model)
 }
 
 func (m *Manager) CallWithFallback(ctx context.Context, prompt string) (string, string, error) {
@@ -55,15 +57,11 @@ func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// Get available providers sorted by priority
-	available := m.getAvailableProviders()
-	if len(available) == 0 {
-		return "", "", fmt.Errorf("no available LLM providers")
+	if len(m.models) == 0 {
+		return "", "", fmt.Errorf("no LLM models configured")
 	}
 
-	for _, providerName := range available {
-		provider := m.providers[providerName]
-
+	for _, model := range m.models {
 		// Check timeout context
 		select {
 		case <-ctx.Done():
@@ -78,11 +76,11 @@ func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt
 		// Start spinner before calling the model
 		stopSpinner := ui.StartSpinner(m.translator.T("interactive.thinking"))
 
-		// If provider supports system prompt, use the version with system prompt
-		if compatProvider, ok := provider.(*OpenAICompatibleProvider); ok && systemPrompt != "" {
-			response, err = compatProvider.CallWithSystemPrompt(ctx, systemPrompt, userPrompt)
+		// If model supports system prompt, use the version with system prompt
+		if compatModel, ok := model.(*OpenAICompatibleProvider); ok && systemPrompt != "" {
+			response, err = compatModel.CallWithSystemPrompt(ctx, systemPrompt, userPrompt)
 		} else {
-			response, err = provider.Call(ctx, userPrompt)
+			response, err = model.Call(ctx, userPrompt)
 		}
 
 		// Stop spinner after the call completes
@@ -95,26 +93,10 @@ func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt
 			continue
 		}
 
-		return response, providerName, nil
+		return response, model.GetName(), nil
 	}
 
 	return "", "", fmt.Errorf("all model calls failed")
-}
-
-func (m *Manager) getAvailableProviders() []string {
-	var available []string
-
-	for _, name := range m.providerOrder {
-		provider, exists := m.providers[name]
-		if !exists {
-			continue
-		}
-		if provider.IsAvailable() {
-			available = append(available, name)
-		}
-	}
-
-	return available
 }
 
 func (m *Manager) GetStatus() map[string]map[string]interface{} {
@@ -123,11 +105,9 @@ func (m *Manager) GetStatus() map[string]map[string]interface{} {
 
 	status := make(map[string]map[string]interface{})
 
-	for name, provider := range m.providers {
-		isAvailable := provider.IsAvailable()
-		status[name] = map[string]interface{}{
-			"name":      provider.GetName(),
-			"available": isAvailable,
+	for _, model := range m.models {
+		status[model.GetName()] = map[string]interface{}{
+			"name": model.GetName(),
 		}
 	}
 
@@ -139,14 +119,7 @@ func (m *Manager) PrintStatus() {
 
 	fmt.Println("\n[" + m.translator.T("llm.status_title") + "]")
 
-	for modelName, info := range status {
-		available := info["available"].(bool)
-
-		statusStr := m.translator.T("llm.status_available")
-		if !available {
-			statusStr = m.translator.T("llm.status_unavailable")
-		}
-
-		fmt.Printf("- %s: %s\n", modelName, statusStr)
+	for modelName := range status {
+		fmt.Printf("- %s\n", modelName)
 	}
 }

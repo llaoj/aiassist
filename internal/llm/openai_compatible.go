@@ -20,7 +20,6 @@ type OpenAICompatibleProvider struct {
 	baseURL    string
 	apiKey     string
 	modelName  string
-	available  bool
 	httpClient *http.Client
 }
 
@@ -73,7 +72,6 @@ func NewOpenAICompatibleProvider(name, baseURL, apiKey, modelName string) *OpenA
 		baseURL:    baseURL,
 		apiKey:     apiKey,
 		modelName:  modelName,
-		available:  true,
 		httpClient: client,
 	}
 }
@@ -99,19 +97,11 @@ func (o *OpenAICompatibleProvider) GetName() string {
 	return o.name
 }
 
-func (o *OpenAICompatibleProvider) IsAvailable() bool {
-	return o.available
-}
-
 func (o *OpenAICompatibleProvider) Call(ctx context.Context, prompt string) (string, error) {
 	return o.CallWithSystemPrompt(ctx, "", prompt)
 }
 
 func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, systemPrompt string, userPrompt string) (string, error) {
-	if !o.available {
-		return "", fmt.Errorf("%s is unavailable (quota exhausted or billing issue)", o.name)
-	}
-
 	messages := []chatMessage{}
 
 	if systemPrompt != "" {
@@ -156,8 +146,7 @@ func (o *OpenAICompatibleProvider) CallWithSystemPrompt(ctx context.Context, sys
 
 	// Check HTTP status code
 	if resp.StatusCode == 429 {
-		// Rate limit or quota exceeded - mark as unavailable
-		o.available = false
+		// Rate limit or quota exceeded
 		return "", fmt.Errorf("%s: quota exceeded or rate limited (HTTP 429)", o.name)
 	}
 

@@ -44,9 +44,9 @@ func initializeSession() (*interactive.Session, *i18n.I18n) {
 				continue
 			}
 
-			providerKey := fmt.Sprintf("%s/%s", provider.Name, modelCfg.Name)
-			llmProvider := llm.NewOpenAICompatibleProvider(
-				providerKey,
+			modelKey := fmt.Sprintf("%s/%s", provider.Name, modelCfg.Name)
+			llmModel := llm.NewOpenAICompatibleProvider(
+				modelKey,
 				provider.BaseURL,
 				provider.APIKey,
 				modelCfg.Name,
@@ -56,11 +56,11 @@ func initializeSession() (*interactive.Session, *i18n.I18n) {
 			// Uses http.ProxyFromEnvironment which automatically selects:
 			// - HTTPS_PROXY for HTTPS URLs
 			// - HTTP_PROXY for HTTP URLs
-			if err := llmProvider.SetProxyFunc(http.ProxyFromEnvironment); err != nil {
-				color.Yellow("Warning: Failed to configure proxy for %s: %v\n", providerKey, err)
+			if err := llmModel.SetProxyFunc(http.ProxyFromEnvironment); err != nil {
+				color.Yellow("Warning: Failed to configure proxy for %s: %v\n", modelKey, err)
 			}
 
-			manager.RegisterProvider(providerKey, llmProvider)
+			manager.RegisterModel(llmModel)
 		}
 	}
 

@@ -9,5 +9,4 @@ type ModelProvider interface {
 	// Call sends an API request
 	Call(ctx context.Context, prompt string) (string, error)
 	GetName() string
-	IsAvailable() bool
 }
