@@ -362,6 +362,38 @@ ps -p 30440 -ww -o pid,ppid,%cpu,%mem,comm
 - 修改类命令（rm、chmod等）强制二次确认
 - 最大限度防止误操作
 
+### 4. 完美的中文支持
+
+使用 **Bubble Tea** 现代化终端 UI 框架：
+- ✅ 支持中文输入编辑
+- ✅ 光标左右移动
+- ✅ 删除字符时提示符不消失
+- ✅ Ctrl+C 优雅退出（统一信号处理）
+- ✅ 选择列表界面（上下箭头选择，Enter 确认）
+- ✅ 更好的用户体验和视觉效果
+
+### 5. 多模型自动切换
+
+![多模型切换](images/model-fallback.png)
+*▲ 多模型自动切换：优先级顺序调用，失败自动切换到下一个*
+
+```yaml
+# 配置文件按优先级排列
+providers:
+  - name: openai
+    enabled: true
+    models:
+      - name: gpt-4
+        enable: true
+  - name: deepseek
+    enabled: true
+    models:
+      - name: deepseek-chat
+        enable: true
+```
+
+当某个模型不可用时，自动切换到下一个，并在终端提示切换原因。
+
 ## 安全机制
 
 AI Shell Assistant 在设计时充分考虑了安全性，实施了多层安全防护机制：
@@ -457,36 +489,6 @@ sudo kill -9 1234
 2. ❌ 在生产环境直接执行未经验证的危险命令
 3. ❌ 跳过安全确认步骤
 
-### 4. 完美的中文支持
-
-使用 `liner` 库替代传统 `readline`：
-- ✅ 支持中文输入编辑
-- ✅ 光标左右移动
-- ✅ 删除字符时提示符不消失
-- ✅ Ctrl+C 优雅退出
-
-### 5. 多模型自动切换
-
-![多模型切换](images/model-fallback.png)
-*▲ 多模型自动切换：优先级顺序调用，失败自动切换到下一个*
-
-```yaml
-# 配置文件按优先级排列
-providers:
-  - name: openai
-    enabled: true
-    models:
-      - name: gpt-4
-        enable: true
-  - name: deepseek
-    enabled: true
-    models:
-      - name: deepseek-chat
-        enable: true
-```
-
-当某个模型不可用时，自动切换到下一个，并在终端提示切换原因。
-
 ## 快速开始
 
 ### 构建安装
@@ -519,6 +521,20 @@ sudo mv aiassist /usr/local/bin/
 
 ### 配置模型
 
+AI Shell Assistant 支持两种配置模式：
+
+**1. 本地配置文件模式（个人使用）**
+- 所有配置存储在本地文件 `~/.aiassist/config.yaml`
+- 适合个人开发者使用
+- 配置修改直接编辑本地文件
+
+**2. Consul 配置中心模式（企业级部署）**
+- 所有配置统一存储在 Consul KV
+- 本地仅需配置 Consul 连接信息
+- 适合企业大规模部署，便于集中管理
+
+#### 本地配置文件模式
+
 直接编辑配置文件 `~/.aiassist/config.yaml`，配置 LLM Provider。
 
 **配置示例：**
@@ -533,7 +549,78 @@ providers:
     models:
       - name: qwen-max
         enable: true
+      - name: qwen-plus
+        enable: true
+  - name: openai
+    base_url: https://api.openai.com/v1
+    api_key: sk-xxxxxxxxxxxx
+    enabled: true
+    models:
+      - name: gpt-4
+        enable: true
 ```
+
+#### Consul 配置中心模式
+
+**步骤1：在 Consul 中创建配置**
+
+首先在 Consul KV 中存储完整配置（key: `aiassist/config`）：
+
+```bash
+# 创建配置文件
+cat > /tmp/aiassist-config.yaml << 'EOF'
+language: zh
+default_model: enterprise/company-llm-v1
+providers:
+  - name: enterprise
+    base_url: https://ai-internal.company.com/v1
+    api_key: ${ENTERPRISE_AI_KEY}
+    enabled: true
+    models:
+      - name: company-llm-v1
+        enable: true
+EOF
+
+# 写入 Consul
+consul kv put aiassist/config @/tmp/aiassist-config.yaml
+```
+
+**步骤2：在客户端配置 Consul 连接**
+
+客户端仅需配置 Consul 连接信息（`~/.aiassist/config.yaml`）：
+
+```yaml
+consul:
+  enabled: true
+  address: "consul.company.com:8500"
+  key: "aiassist/config"
+  token: "your-acl-token"  # 可选，启用 ACL 时需要
+```
+
+**步骤3：运行 aiassist**
+
+aiassist 启动时会自动从 Consul 加载完整配置：
+
+```bash
+$ aiassist
+
+# 自动执行流程：
+# 1. 读取本地 ~/.aiassist/config.yaml
+# 2. 检测到 consul.enabled: true
+# 3. 连接 Consul 并加载配置
+# 4. 使用 Consul 中的 providers 运行
+```
+
+**Consul 模式优势：**
+- ✅ 统一配置管理 - 所有主机共享同一份配置
+- ✅ 动态更新 - 在 Consul 修改配置，所有主机实时生效
+- ✅ 环境隔离 - 通过不同的 Key 区分开发/测试/生产环境
+- ✅ 安全可控 - 支持 ACL 权限控制
+- ✅ 高可用 - Consul 集群保证配置服务可用性
+
+**详细配置指南：**
+- 查看 [docs/CONSUL.md](CONSUL.md) 了解完整的 Consul 配置中心使用指南
+- 包括集群部署、环境管理、Kubernetes 集成等高级场景
 
 **支持所有 OpenAI 兼容接口**，包括：
 - OpenAI (GPT-4, GPT-3.5)
@@ -578,53 +665,7 @@ $ docker ps -a | aiassist "检查容器状态"
 
 AI Shell Assistant 在设计之初就按照独立可用的产品架构，可以方便地集成到企业现有的产品体系中，无需大规模改造即可为现有产品赋能 AI 能力。
 
-### 1. 内置企业自有大模型
-
-**适用场景**：企业拥有自己的大模型服务，希望为内部用户提供开箱即用的 AI 运维助手。
-
-**集成方式**：
-
-**方式一：硬编码配置**
-```go
-// 在源码中预置企业模型配置
-func init() {
-    defaultConfig := Config{
-        Language: "zh",
-        Providers: []Provider{
-            {
-                Name:    "enterprise",
-                BaseURL: "https://ai-internal.company.com/v1",
-                APIKey:  os.Getenv("ENTERPRISE_AI_KEY"),
-                Enabled: true,
-                Models: []Model{
-                    {Name: "company-llm-v1", Enabled: true},
-                },
-            },
-        },
-    }
-}
-```
-
-**方式二：预置配置文件**
-```bash
-# 在分发的二进制包中预置 ~/.aiassist/config.yaml
-providers:
-  - name: enterprise
-    base_url: https://ai-internal.company.com/v1
-    api_key: ${ENTERPRISE_AI_KEY}
-    enabled: true
-    models:
-      - name: company-llm-v1
-        enable: true
-```
-
-**优势**：
-- ✅ 用户零配置，下载即用
-- ✅ 统一企业内部大模型接入
-- ✅ 便于集中管理和审计
-- ✅ 降低使用门槛
-
-### 2. 集成到 Web Terminal
+### 1. 集成到 Web Terminal
 
 **适用场景**：企业产品（如容器云、DevOps 平台、云主机管理）提供 Web Terminal 功能，希望增强用户体验。
 
@@ -700,7 +741,7 @@ terminal.onData(data => {
 - 直接执行：`cat build.log | aiassist "为什么构建失败"`
 - 获得结构化的错误分析和修复建议
 
-### 4. 企业定制化
+### 2. 企业定制化
 
 **品牌定制**：
 - 自定义欢迎信息和帮助文档
