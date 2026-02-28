@@ -79,12 +79,13 @@ func runInteractiveMode(initialQuestion string) {
 
 	err := session.Run(initialQuestion)
 	if err != nil {
+		fmt.Println()
 		if errors.Is(err, interactive.ErrUserDone) {
-			color.Cyan(translator.T("interactive.goodbye") + "\n")
+			fmt.Println(translator.T("interactive.goodbye"))
 			return
 		}
 		if errors.Is(err, interactive.ErrUserExit) || errors.Is(err, interactive.ErrUserAbort) {
-			color.Cyan("\n" + translator.T("ui.ctrlc_exit_message") + "\n")
+			// Global interrupt handler already printed exit message
 			return
 		}
 		color.Red(translator.T("error.general", err) + "\n")
@@ -97,12 +98,11 @@ func runPipeMode(initialQuestion string) {
 
 	err := session.RunWithPipe(initialQuestion)
 	if err != nil {
+		fmt.Println()
 		if errors.Is(err, interactive.ErrUserExit) || errors.Is(err, interactive.ErrUserAbort) {
-			fmt.Println()
-			color.Cyan(translator.T("ui.ctrlc_exit_message") + "\n")
+			// Global interrupt handler already printed exit message
 			return
 		}
-		fmt.Println()
 		color.Red(translator.T("error.general", err) + "\n")
 		os.Exit(1)
 	}

@@ -30,8 +30,13 @@ func init() {
 }
 
 func main() {
-	// Note: Signal handling is managed by Bubble Tea internally
-	// No need for manual signal handlers anymore
+	// Initialize configuration to get language setting
+	cfg := config.Get()
+
+	// Setup global interrupt handler
+	// This creates a context that gets cancelled on Ctrl+C
+	// and prints exit message before terminating
+	cmd.SetupInterruptHandler(cfg.GetLanguage())
 
 	if err := cmd.Execute(); err != nil {
 		// Check if it's a user exit (normal termination)
