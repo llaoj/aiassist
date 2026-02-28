@@ -2,7 +2,7 @@
 
 > 🤖 一个完全由 AI 编写的开源运维工具，支持中文交互，多模型自动切换
 
-<img src="../logo.svg" alt="AI Shell Assistant Logo" width="60%" align="left">
+![AI Shell Assistant Logo](../logo.svg)
 
 ## 写在前面
 
@@ -19,10 +19,10 @@
 
 **AI Shell Assistant (aiassist)** 是一个基于大语言模型的智能终端工具，通过自然语言交互为运维人员提供诊断分析、方案建议和命令执行指导。
 
-**项目地址**: https://gitlab.cosmoplat.com/devops/aiassist
+**项目地址**: https://gitlab.cosmoplat.com/devops/aiassist  
 **访问权限**: 联系 21001713 王伟阳 获取访问权限
 
-<img src="images/architecture.png" alt="项目架构图" width="60%" align="left">
+![项目架构图](images/architecture.png)
 *▲ 系统架构：从用户输入到命令执行的完整流程*
 
 ### 核心特点
@@ -136,7 +136,7 @@ AI Shell Assistant 采用模块化架构设计，主要包含以下核心组件�
 
 ### 场景1：服务器资源排查
 
-<img src="images/scenario-1.gif" alt="服务器排查演示" width="60%" align="left">
+![服务器排查演示](images/scenario-1.gif)
 *▲ 真实场景演示：AI 一步步引导排查问题*
 
 ```bash
@@ -197,7 +197,7 @@ sudo kill -9 161
 
 ### 场景2：管道模式分析日志
 
-<img src="images/scenario-2.gif" alt="管道模式演示" width="60%" align="left">
+![管道模式演示](images/scenario-2.gif)
 *▲ 管道模式：直接分析日志输出，支持13,000行数据*
 
 ```bash
@@ -334,7 +334,7 @@ ps -p 30440 -ww -o pid,ppid,%cpu,%mem,comm
 
 ### 1. 智能递归分析
 
-<img src="images/recursive-analysis.png" alt="递归分析流程" width="60%" align="left">
+![递归分析流程](images/recursive-analysis.png)
 *▲ 递归分析流程：从用户提问到最终诊断的完整路径（最多10层）*
 
 支持最多 **10层递归命令分析**，AI 会：
@@ -350,7 +350,7 @@ ps -p 30440 -ww -o pid,ppid,%cpu,%mem,comm
 
 ### 3. 严格的安全控制
 
-<img src="images/security-control.png" alt="安全控制机制" width="60%" align="left">
+![安全控制机制](images/security-control.png)
 *▲ 安全控制流程：查询命令（绿色）一次确认，修改命令（红色）二次确认*
 
 ```
@@ -467,7 +467,7 @@ sudo kill -9 1234
 
 ### 5. 多模型自动切换
 
-<img src="images/model-fallback.png" alt="多模型切换" width="60%" align="left">
+![多模型切换](images/model-fallback.png)
 *▲ 多模型自动切换：优先级顺序调用，失败自动切换到下一个*
 
 ```yaml
