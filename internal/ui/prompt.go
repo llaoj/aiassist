@@ -46,7 +46,7 @@ func (m inputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyEnter:
 			return m, tea.Quit
-		case tea.KeyCtrlC, tea.KeyEsc:
+		case tea.KeyCtrlC:
 			// Send SIGINT to trigger global interrupt handler
 			// This unifies all exit logic in one place
 			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
@@ -93,7 +93,7 @@ func (m selectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyEnter:
 			return m, tea.Quit
-		case tea.KeyCtrlC, tea.KeyEsc:
+		case tea.KeyCtrlC:
 			// Send SIGINT to trigger global interrupt handler
 			// This unifies all exit logic in one place
 			syscall.Kill(syscall.Getpid(), syscall.SIGINT)

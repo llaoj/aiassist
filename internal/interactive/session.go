@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/fatih/color"
 	"github.com/llaoj/aiassist/internal/executor"
@@ -249,13 +248,6 @@ func (s *Session) runInteractiveLoop() error {
 		prompt := s.translator.T("interactive.input_prompt")
 		userInput, err := s.readUserInput(prompt)
 		if err != nil {
-			if err == io.EOF {
-				// EOF (Ctrl+D) - send SIGINT to trigger global handler
-				fmt.Println()
-				fmt.Println(s.translator.T("interactive.goodbye"))
-				syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-				return nil
-			}
 			color.Red("Error: %v\n", err)
 			continue
 		}

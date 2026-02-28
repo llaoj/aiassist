@@ -96,5 +96,4 @@ var EnglishMessages = map[string]string{
 
 	// UI messages
 	"ui.ctrlc_exit_hint":      "Press Ctrl+C again to exit",
-	"ui.ctrlc_exit_message":   "User exited via Ctrl+C, goodbye!",
 }

@@ -100,5 +100,4 @@ var ChineseMessages = map[string]string{
 
 	// UI messages
 	"ui.ctrlc_exit_hint":    "再按一次 Ctrl+C 退出程序",
-	"ui.ctrlc_exit_message": "用户通过 Ctrl+C 退出，再见！",
 }

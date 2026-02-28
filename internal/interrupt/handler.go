@@ -49,7 +49,7 @@ func Setup(lang string) context.Context {
 
 			// Print exit message and exit
 			fmt.Println()
-			fmt.Println(translator.T("ui.ctrlc_exit_message"))
+			fmt.Println(translator.T("interactive.goodbye"))
 			os.Exit(0)
 		}()
 	})
