@@ -49,7 +49,7 @@ aiassist/
 ### 3. **命令执行器** (`internal/executor/executor.go`)
 - 命令分类：查询类（绿色）vs 修改类（红色）
 - 智能提取 AI 响应中的命令
-- 二次确认机制防止误操作
+- 选择列表确认机制防止误操作
 - 支持与管道输入集成
 
 ### 4. **交互会话** (`internal/interactive/session.go`)
@@ -57,8 +57,8 @@ aiassist/
 - 管道联动模式 - 处理 stdin 数据（最多1.6MB，~13k行nginx日志）
 - 上下文联动 - 自动传递命令执行结果，最多10层递归分析
 - 会话历史管理
-- 使用 liner 库支持中文输入、光标移动、Ctrl+C退出
-- 严格输入验证：确认提示仅接受 y/n/exit 输入
+- 使用 Bubble Tea 库提供现代化的终端交互界面
+- 选择列表确认：使用上下箭头选择 Yes/No，Enter 确认
 
 ### 5. **CLI 框架** (`internal/cmd/`)
 - 使用 Cobra 框架实现命令行
@@ -93,19 +93,19 @@ tail -f /var/log/nginx/access.log | aiassist "请分析这些日志是否有异�
 ### ✅ 智能上下文管理
 - 递归深度限制：最多10层命令分析防止无限递归
 - 内存保护：管道输入限制400K字符（~1.6MB，支持13,000行nginx日志）
-- 命令输出截断：100K字符限制，保留头尾关键信息
+- 命令输出截断：400K字符限制，保留头尾关键信息
 - 自动读取上一条命令的输出并传递给 AI
 - 支持递进式问题排查
 
 ### ✅ 命令执行风险管控
 - 查询命令 → 绿色展示 → 一次确认
 - 修改命令 → 红色展示 → 二次确认
-- 严格输入验证：仅接受 y/n/exit，无效输入循环提示
+- 选择列表确认：使用上下箭头选择 Yes/No，Enter 确认
 - 最大限度规避误操作
 
 ### ✅ 输入处理增强
-- 使用 liner 库替代 readline，完美支持中文输入
-- 支持光标移动、删除字符等编辑操作
+- 使用 Bubble Tea 库提供现代化终端交互界面
+- 支持选择列表和文本输入
 - Ctrl+C 处理：所有输入点统一支持退出
 - 管道模式简化：非交互式，仅显示分析结果
 
@@ -125,7 +125,8 @@ tail -f /var/log/nginx/access.log | aiassist "请分析这些日志是否有异�
 - github.com/spf13/cobra - CLI 框架
 - github.com/spf13/viper - 配置管理
 - github.com/fatih/color - 终端彩色输出
-- github.com/peterh/liner - 行编辑，支持中文输入和光标移动
+- github.com/charmbracelet/bubbletea - 现代化终端UI框架
+- github.com/charmbracelet/bubbles - Bubble Tea 组件库
 - gopkg.in/yaml.v3 - YAML 解析
 ```
 

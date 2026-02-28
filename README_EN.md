@@ -27,7 +27,7 @@
 - 🔄 **Smart Fallback**: Automatic model switching based on configuration order
 - 🎯 **Context-Aware**: Correlates command execution results for continuous conversation
 - 📊 **Pipeline Analysis**: Directly analyzes command output streams
-- 🛡️ **Safety Controls**: Query (green) vs modify (red) commands, supports y/n shortcuts, modify commands require double confirmation after initial approval
+- 🛡️ **Safety Controls**: Query (green) vs modify (red) commands, selection list confirmation, modify commands require double confirmation
 - 🌍 **Multilingual**: Chinese/English interface
 - ⚙️ **Flexible Configuration**: Multiple Providers, models, custom API Keys, and proxies
 

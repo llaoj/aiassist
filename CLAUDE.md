@@ -64,13 +64,13 @@ make clean
   1. Interactive: Continuous dialogue with command execution
   2. Pipe: Analyze piped data and exit (no command execution)
 - Recursion depth limit (10) prevents infinite command loops
-- Truncates large outputs to fit LLM context windows (100k chars for interactive, 400k for pipe)
+- Truncates large outputs to fit LLM context windows (400k chars limit for both modes)
 
 **Command Executor**: `internal/executor/executor.go`
 - Extracts commands from AI responses using `[cmd:query]` and `[cmd:modify]` markers
 - Classifies commands by risk level:
-  - Query commands (green): Read-only operations, single confirmation
-  - Modify commands (red): Write operations, double confirmation
+  - Query commands (green): Read-only operations, single confirmation (selection list)
+  - Modify commands (red): Write operations, double confirmation (selection list)
 - Executes commands via `sh -c` shell
 
 **Prompt System**: `internal/prompt/`
@@ -149,8 +149,7 @@ When adding/modifying providers or models:
 ### Output Truncation Strategy
 
 For large outputs, the system uses intelligent truncation:
-- Interactive mode: 100k character limit
-- Pipe mode: 400k character limit (supports ~13k lines of nginx logs)
+- Both interactive and pipe mode: 400k character limit (supports ~13k lines of nginx logs)
 - Keeps 60% from beginning, 40% from end
 - Adds truncation message showing number of omitted lines
 
@@ -170,7 +169,7 @@ The `-s -w` flags strip debug information for smaller binaries. `CGO_ENABLED=0` 
 - Config file: `~/.aiassist/config.yaml`
 - System info cache: `~/.aiassist/sysinfo.json`
 - Go version: 1.21+
-- Main dependencies: Cobra (CLI), fatih/color (terminal colors), peterh/liner (line editor), hashicorp/consul/api (config center)
+- Main dependencies: Cobra (CLI), fatih/color (terminal colors), charmbracelet/bubbletea (modern terminal UI), hashicorp/consul/api (config center)
 
 ## Documentation Synchronization
 
