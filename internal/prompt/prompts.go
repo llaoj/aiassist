@@ -17,11 +17,25 @@ type SystemPrompts struct {
 func GetSystemPrompts() SystemPrompts {
 	lang := config.Get().GetLanguage()
 
-	if lang == config.LanguageChinese {
-		return chinesePrompts
+	// Start with base English prompts
+	prompts := SystemPrompts{
+		Interactive:      baseInteractivePrompt,
+		ContinueAnalysis: baseContinueAnalysisPrompt,
+		PipeAnalysis:     basePipeAnalysisPrompt,
 	}
 
-	return englishPrompts
+	// Append language instruction based on user preference
+	if lang == config.LanguageChinese {
+		prompts.Interactive += "\n\nIMPORTANT: Please respond in Chinese (Simplified)."
+		prompts.ContinueAnalysis += "\n\nIMPORTANT: Please respond in Chinese (Simplified)."
+		prompts.PipeAnalysis += "\n\nIMPORTANT: Please respond in Chinese (Simplified)."
+	} else {
+		prompts.Interactive += "\n\nIMPORTANT: Please respond in English."
+		prompts.ContinueAnalysis += "\n\nIMPORTANT: Please respond in English."
+		prompts.PipeAnalysis += "\n\nIMPORTANT: Please respond in English."
+	}
+
+	return prompts
 }
 
 func GetInteractivePrompt() string {
@@ -48,7 +62,7 @@ func injectBlacklist(prompt string) string {
 	if blacklistText == "" {
 		// Remove the [Command Blacklist]: section entirely
 		// The placeholder line is: [Command Blacklist]:\n{{COMMAND_BLACKLIST}}
-		return strings.ReplaceAll(prompt, "{{COMMAND_BLACKLIST}}", "无（未配置黑名单）")
+		return strings.ReplaceAll(prompt, "{{COMMAND_BLACKLIST}}", "None (no blacklist configured)")
 	}
 
 	// Replace placeholder with actual blacklist
