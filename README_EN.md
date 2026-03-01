@@ -188,6 +188,43 @@ providers:
 
 ---
 
+## 🛡️ Safety Design
+
+### Command Blacklist
+
+The command blacklist provides two-layer protection:
+
+1. **AI Prompt Layer**: AI is informed of blacklist content and tries to avoid generating blacklisted commands
+2. **Execution Block Layer**: Even if AI generates a blacklisted command, it will be intercepted before execution
+
+**Configuration Example:**
+
+```yaml
+blacklist:
+  - "rm *"               # Block all rm commands with arguments
+  - "dd *"               # Block dd command (dangerous disk operations)
+  - "kubectl delete *"   # Block kubectl delete operations
+  - "shutdown"           # Block shutdown command
+```
+
+**Matching Rules:**
+- Word-level matching, trailing `*` matches all remaining arguments (at least one)
+- `rm *` matches `rm -rf /` but **NOT** `rm`
+- `shutdown` matches `shutdown` and `shutdown -h now`
+
+For detailed configuration, see [Command Blacklist](#command-blacklist-1) section.
+
+### Command Classification
+
+aiassist classifies commands into two categories:
+
+| Type | Marker | Color | Confirmations | Examples |
+|------|--------|-------|---------------|----------|
+| Query Command | `[cmd:query]` | 🟢 Green | 1 | `ps aux`, `cat /etc/config`, `docker ps` |
+| Modify Command | `[cmd:modify]` | 🔴 Red | 2 | `systemctl restart`, `rm -rf`, `iptables -A` |
+
+---
+
 ### Command Blacklist
 
 **Functionality:**

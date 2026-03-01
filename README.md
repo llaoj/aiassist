@@ -399,6 +399,30 @@ Models: model-name-1,model-name-2
 
 ## 🛡️ 安全设计
 
+### 命令黑名单
+
+命令黑名单提供两层防护：
+
+1. **AI 提示层**：AI 被告知黑名单内容，尽量避免生成黑名单中的命令
+2. **执行拦截层**：即使 AI 生成了黑名单命令，执行前也会被系统拦截并拒绝
+
+**配置示例：**
+
+```yaml
+blacklist:
+  - "rm *"               # 禁止所有带参数的 rm 命令
+  - "dd *"               # 禁止 dd 命令（危险磁盘操作）
+  - "kubectl delete *"   # 禁止 kubectl delete 操作
+  - "shutdown"           # 禁止 shutdown 命令
+```
+
+**匹配规则：**
+- 词级匹配，尾部 `*` 匹配剩余所有参数（至少一个）
+- `rm *` 匹配 `rm -rf /` 但**不匹配** `rm`
+- `shutdown` 匹配 `shutdown` 和 `shutdown -h now`
+
+详细配置见 [命令黑名单](#命令黑名单-1) 章节。
+
 ### 命令分类
 
 aiassist 将命令分为两类：
