@@ -77,6 +77,11 @@ var ChineseMessages = map[string]string{
 	"executor.read_input_failed":    "读取输入失败: %v",
 	"executor.max_depth_reached":    "警告: 已达到最大命令分析深度。停止以防止无限递归。",
 
+	// Blacklist messages
+	"executor.blacklisted":        "✗ 命令被拒绝: 该命令匹配黑名单规则 '%s'，禁止执行",
+	"executor.blacklist_hint":     "如需执行此命令，请联系管理员申请权限或修改黑名单配置",
+	"executor.blacklist_required": "注意: 该命令匹配黑名单规则 '%s'，属于禁止执行的命令。如必须使用，请先向用户申请权限",
+
 	// Output truncation messages
 	"output.truncated": "省略 %d 行输出",
 

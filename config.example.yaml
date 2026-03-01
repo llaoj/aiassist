@@ -45,11 +45,21 @@ consul:
 
 # language: zh
 # default_model: bailian/qwen-max
-# 
+#
 # # 不配置 consul 或设置 enabled: false
 # # consul:
 # #   enabled: false
-# 
+#
+# # 命令黑名单（支持 glob 模式匹配）
+# # 黑名单中的命令将被拒绝执行
+# # AI 会被告知黑名单内容，尽量避免生成这些命令
+# # 如果必须使用，AI 会明确告知用户该命令在黑名单中
+# blacklist:
+#   - "rm *"               # 禁止所有 rm 命令
+#   - "dd *"               # 禁止 dd 命令（危险磁盘操作）
+#   - "kubectl delete *"   # 禁止 kubectl delete 操作
+#   - ":(){ :|:& };:"      # 禁止 fork 炸弹
+#
 # # 直接配置 providers
 # providers:
 #   - name: bailian

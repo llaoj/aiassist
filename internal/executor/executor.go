@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/llaoj/aiassist/internal/blacklist"
 	"github.com/llaoj/aiassist/internal/i18n"
 )
 
@@ -24,10 +25,14 @@ type Command struct {
 }
 
 // CommandExecutor handles command extraction and execution
-type CommandExecutor struct{}
+type CommandExecutor struct {
+	blacklistChecker *blacklist.Checker
+}
 
 func NewCommandExecutor() *CommandExecutor {
-	return &CommandExecutor{}
+	return &CommandExecutor{
+		blacklistChecker: blacklist.NewChecker(),
+	}
 }
 
 func (ce *CommandExecutor) GetCommandTypeInfo(cmdType CommandType, translator *i18n.I18n) (string, *color.Color) {
@@ -42,7 +47,18 @@ func (ce *CommandExecutor) DisplayCommand(cmdText string, cmdType CommandType, t
 	label, colorFn := ce.GetCommandTypeInfo(cmdType, translator)
 	colorFn.Println(label)
 	colorFn.Println(cmdText)
+
+	// Check if command is blacklisted
+	if blacklisted, pattern := ce.blacklistChecker.IsBlacklisted(cmdText); blacklisted {
+		color.Yellow(translator.T("executor.blacklist_required", pattern))
+	}
+
 	fmt.Println()
+}
+
+// IsBlacklisted checks if a command is in the blacklist
+func (ce *CommandExecutor) IsBlacklisted(cmdText string) (bool, string) {
+	return ce.blacklistChecker.IsBlacklisted(cmdText)
 }
 
 // ExecuteCommand executes the command and returns the output

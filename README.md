@@ -217,6 +217,16 @@ aiassist 支持两种配置模式：
 ```yaml
 language: zh  # zh=中文, en=English
 
+# 命令黑名单（可选）
+# 黑名单中的命令将被拒绝执行
+# AI 会被告知黑名单内容，尽量避免生成这些命令
+# 如果必须使用，AI 会明确告知用户该命令在黑名单中
+blacklist:
+  - "rm *"               # 禁止所有 rm 命令
+  - "dd *"               # 禁止 dd 命令（危险磁盘操作）
+  - "kubectl delete *"   # 禁止 kubectl delete 操作
+  - ":(){ :|:& };:"      # 禁止 fork 炸弹
+
 providers:
   - name: bailian  # Provider 名称
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
@@ -249,6 +259,77 @@ providers:
 3. `openai/gpt-4` (第三个启用的)
 
 如果当前模型调用失败、超时或不可用，会自动切换到下一个启用的模型。
+
+### 命令黑名单
+
+**功能说明：**
+
+命令黑名单机制提供两层保护：
+
+1. **AI 提示层**：AI 被告知黑名单内容，会尽量避免生成黑名单中的命令。如果必须使用，AI 会明确告知用户该命令在黑名单中，需要申请权限。
+
+2. **执行拦截层**：即使 AI 生成了黑名单命令，执行前也会被系统拦截，显示拒绝信息并拒绝执行。
+
+**配置示例：**
+
+```yaml
+blacklist:
+  - "rm *"               # 禁止所有 rm 命令
+  - "dd *"               # 禁止 dd 命令（危险磁盘操作）
+  - "kubectl delete *"   # 禁止 kubectl delete 操作
+  - ":(){ :|:& };:"      # 禁止 fork 炸弹
+  - "shutdown"           # 禁止 shutdown 命令
+  - "reboot"             # 禁止 reboot 命令
+```
+
+**模式匹配：**
+
+- 支持 glob 模式匹配（类似 shell 通配符）
+- `*` 匹配任意字符
+- 示例：
+  - `rm *` 匹配所有以 `rm` 开头的命令（如 `rm -rf /`、`rm file.txt`）
+  - `kubectl delete *` 匹配所有 kubectl delete 操作
+  - `shutdown` 精确匹配 `shutdown` 命令
+
+**工作流程：**
+
+```
+用户提问
+    ↓
+AI 分析（被告知黑名单）
+    ↓
+生成命令建议（可能包含黑名单命令）
+    ↓
+显示命令（如果匹配黑名单，显示警告）
+    ↓
+用户确认执行
+    ↓
+系统检查黑名单
+    ├─ 匹配 → 拒绝执行，返回拒绝信息给 AI
+    └─ 不匹配 → 执行命令
+```
+
+**示例场景：**
+
+```
+You> 删除日志文件
+
+AI> 建议执行以下命令：
+[修改命令]
+rm /var/log/app.log
+注意: 该命令匹配黑名单规则 'rm *'，属于禁止执行的命令。
+如必须使用，请先向用户申请权限
+
+是否执行? (yes/no): yes
+
+✗ 命令被拒绝: 该命令匹配黑名单规则 'rm *'，禁止执行
+如需执行此命令，请联系管理员申请权限或修改黑名单配置
+
+AI> 由于 rm 命令在黑名单中，建议使用其他方式：
+1. 使用 truncate 清空文件内容
+[修改命令]
+truncate -s 0 /var/log/app.log
+```
 
 ### Provider 配置
 

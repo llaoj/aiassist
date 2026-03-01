@@ -284,6 +284,23 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 		fmt.Println()
 		s.executor.DisplayCommand(cmd.Text, cmd.Type, s.translator)
 
+		// Check if command is blacklisted
+		if blacklisted, pattern := s.executor.IsBlacklisted(cmd.Text); blacklisted {
+			color.Red(s.translator.T("executor.blacklisted", pattern))
+			fmt.Println(s.translator.T("executor.blacklist_hint"))
+
+			// Add blacklist rejection to conversation history for AI analysis
+			blacklistResult := fmt.Sprintf("[%s]\n%s\n\n[%s]\n%s",
+				s.translator.T("interactive.executed_command"), cmd.Text,
+				"Blacklist Rejection", s.translator.T("executor.blacklisted", pattern))
+
+			if !executedAny {
+				executedAny = true
+				return s.analyzeCommandOutput(blacklistResult)
+			}
+			continue
+		}
+
 		confirmed, err := s.confirmCommandExecution(cmd.Type)
 		if err != nil {
 			return err

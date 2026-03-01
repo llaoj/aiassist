@@ -45,6 +45,7 @@ type Config struct {
 	DefaultModel string            `yaml:"default_model"`
 	Consul       *ConsulConfig     `yaml:"consul,omitempty"` // Consul config center settings
 	Providers    []*ProviderConfig `yaml:"providers"`
+	Blacklist    []string          `yaml:"blacklist,omitempty"` // Command blacklist with glob pattern support
 
 	ConfigDir  string       `yaml:"-"`
 	ConfigFile string       `yaml:"-"`
@@ -283,4 +284,14 @@ func (c *Config) ConfigExists() bool {
 
 	_, err := os.Stat(c.ConfigFile)
 	return err == nil
+}
+
+// GetBlacklist returns the command blacklist
+func (c *Config) GetBlacklist() []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	blacklist := make([]string, len(c.Blacklist))
+	copy(blacklist, c.Blacklist)
+	return blacklist
 }

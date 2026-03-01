@@ -164,6 +164,16 @@ Configuration example:
 language: en
 default_model: bailian/qwen-max
 
+# Command Blacklist (Optional)
+# Commands matching these patterns will be rejected during execution
+# AI will be informed of the blacklist and try to avoid these commands
+# If absolutely necessary, AI will warn users about the blacklist
+blacklist:
+  - "rm *"               # Block all rm commands
+  - "dd *"               # Block dd command (dangerous disk operations)
+  - "kubectl delete *"   # Block kubectl delete operations
+  - ":(){ :|:& };:"      # Block fork bomb
+
 providers:
   - name: bailian
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
@@ -177,6 +187,80 @@ providers:
 ```
 
 ---
+
+### Command Blacklist
+
+**Functionality:**
+
+The command blacklist mechanism provides two-layer protection:
+
+1. **AI Prompt Layer**: AI is informed of the blacklist content and tries to avoid generating blacklisted commands. If a blacklisted command is absolutely necessary, AI will clearly inform the user that the command is in the blacklist and permission is required.
+
+2. **Execution Block Layer**: Even if AI generates a blacklisted command, it will be intercepted before execution, showing rejection message and refusing to execute.
+
+**Configuration Example:**
+
+```yaml
+blacklist:
+  - "rm *"               # Block all rm commands
+  - "dd *"               # Block dd command (dangerous disk operations)
+  - "kubectl delete *"   # Block kubectl delete operations
+  - ":(){ :|:& };:"      # Block fork bomb
+  - "shutdown"           # Block shutdown command
+  - "reboot"             # Block reboot command
+```
+
+**Pattern Matching:**
+
+- Supports glob pattern matching (similar to shell wildcards)
+- `*` matches any characters
+- Examples:
+  - `rm *` matches all commands starting with `rm` (e.g., `rm -rf /`, `rm file.txt`)
+  - `kubectl delete *` matches all kubectl delete operations
+  - `shutdown` exactly matches the `shutdown` command
+
+**Workflow:**
+
+```
+User asks question
+    ↓
+AI analyzes (informed of blacklist)
+    ↓
+Generates command suggestion (may contain blacklisted command)
+    ↓
+Displays command (if matches blacklist, shows warning)
+    ↓
+User confirms execution
+    ↓
+System checks blacklist
+    ├─ Match → Reject execution, return rejection message to AI
+    └─ No match → Execute command
+```
+
+**Example Scenario:**
+
+```
+You> Delete log files
+
+AI> Suggest executing the following command:
+[Modify Command]
+rm /var/log/app.log
+Note: This command matches blacklist rule 'rm *' and is forbidden.
+If you must use it, please request permission from the user first
+
+Execute this command? (yes/no): yes
+
+✗ Command rejected: This command matches blacklist rule 'rm *', execution forbidden
+To execute this command, please contact the administrator for permission or modify the blacklist configuration
+
+AI> Since the rm command is in the blacklist, suggest using alternative approach:
+1. Use truncate to clear file content
+[Modify Command]
+truncate -s 0 /var/log/app.log
+```
+
+---
+
 ### API Key Information
 
 Each LLM Provider requires an API Key for access. API Keys are credentials for accessing model services - please keep them secure.

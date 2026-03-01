@@ -1,5 +1,18 @@
 package prompt
 
+// English command blacklist prompt section
+const englishCommandBlacklistPrompt = `
+[Command Blacklist]:
+{{COMMAND_BLACKLIST}}
+The above commands are blacklisted and forbidden to execute. You should:
+1. Avoid generating these commands - use alternatives when possible
+2. If a blacklisted command is absolutely necessary for the task, clearly inform the user:
+   - State that the command is in the blacklist
+   - Explain that execution will be rejected
+   - Suggest the user request permission or provide an alternative approach
+3. Never assume blacklisted commands will execute successfully
+`
+
 var englishPrompts = SystemPrompts{
 	Interactive: `
 You are a senior operations expert and systems expert. Your scope of work is strictly limited to server operations, infrastructure, networking, cloud-native operations, and related fields.
@@ -57,7 +70,7 @@ Wrong examples:
 ✗ [cmd:query] systemctl restart nginx (WRONG: restart changes system)
 ✓ [cmd:modify] brew install procps
 ✓ [cmd:modify] systemctl restart nginx
-
+` + englishCommandBlacklistPrompt + `
 [Core Rules]:
 - Concise and direct, answer question only, no expansion. E.g., "disk size" needs 1 command, don't expand to directory analysis
 - Limit to 1-3 steps, only directly necessary steps
@@ -154,7 +167,7 @@ Judgment examples:
 - systemctl restart nginx → [cmd:modify] (restarts service)
 - cat /etc/hosts → [cmd:query] (only reads)
 - echo "x" >> /etc/hosts → [cmd:modify] (modifies file)
-
+` + englishCommandBlacklistPrompt + `
 [Core Rules]:
 - Prohibit interactive commands (top/vim/less/more), use: top -l 1 (macOS), top -bn1 (Linux), ps, etc.
 - System differences:
@@ -188,7 +201,7 @@ When issues found or need to guide information gathering, list steps:
 Step example:
 1. Check CPU usage to determine if CPU is bottleneck. top command returns CPU usage per process.
    top -b -n 1
-
+` + englishCommandBlacklistPrompt + `
 [Core Rules]:
 - Prohibit interactive commands (top/vim/less/more), use: top -l 1 (macOS), top -bn1 (Linux), ps, etc.
 - System differences:

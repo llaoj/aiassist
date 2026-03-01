@@ -74,6 +74,11 @@ var EnglishMessages = map[string]string{
 	"executor.cancelled":            "Cancelled",
 	"executor.read_input_failed":    "Failed to read input: %v",
 	"executor.max_depth_reached":    "Warning: Maximum command analysis depth reached. Stopping to prevent infinite recursion.",
+
+	// Blacklist messages
+	"executor.blacklisted":        "✗ Command rejected: This command matches blacklist rule '%s', execution forbidden",
+	"executor.blacklist_hint":     "To execute this command, please contact the administrator for permission or modify the blacklist configuration",
+	"executor.blacklist_required": "Note: This command matches blacklist rule '%s' and is forbidden. If you must use it, please request permission from the user first",
 	// Output truncation messages
 	"output.truncated": "omitted %d lines of output",
 	// Error messages
