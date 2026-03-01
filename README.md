@@ -284,12 +284,14 @@ blacklist:
 
 **模式匹配：**
 
-- 支持 glob 模式匹配（类似 shell 通配符）
-- `*` 匹配任意字符
-- 示例：
-  - `rm *` 匹配所有以 `rm` 开头的命令（如 `rm -rf /`、`rm file.txt`）
-  - `kubectl delete *` 匹配所有 kubectl delete 操作
-  - `shutdown` 精确匹配 `shutdown` 命令
+- 基于词级匹配，pattern 和命令都按空格分词后逐词比较
+- 尾部 `*` 表示"匹配剩余所有参数（至少一个）"
+  - `rm *` 匹配 `rm -rf /` 和 `rm file.txt`，但**不匹配** `rm`（无参数）
+  - `kubectl delete *` 匹配 `kubectl delete pod nginx`，但**不匹配** `kubectl delete`
+- 无 `*` 时只需前缀词匹配（允许命令有额外参数）
+  - `shutdown` 匹配 `shutdown` 和 `shutdown -h now`
+  - `rm -rf` 匹配 `rm -rf /tmp`，但**不匹配** `rm -r /tmp`
+- 命令第一个词取 base name，`/usr/bin/rm` 等同于 `rm`
 
 **工作流程：**
 

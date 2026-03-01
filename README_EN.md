@@ -212,12 +212,14 @@ blacklist:
 
 **Pattern Matching:**
 
-- Supports glob pattern matching (similar to shell wildcards)
-- `*` matches any characters
-- Examples:
-  - `rm *` matches all commands starting with `rm` (e.g., `rm -rf /`, `rm file.txt`)
-  - `kubectl delete *` matches all kubectl delete operations
-  - `shutdown` exactly matches the `shutdown` command
+- Word-level matching: both pattern and command are tokenized into words for comparison
+- Trailing `*` means "match all remaining arguments (at least one)"
+  - `rm *` matches `rm -rf /` and `rm file.txt`, but **NOT** `rm` (no arguments)
+  - `kubectl delete *` matches `kubectl delete pod nginx`, but **NOT** `kubectl delete`
+- Without `*`, only prefix words need to match (extra arguments allowed)
+  - `shutdown` matches both `shutdown` and `shutdown -h now`
+  - `rm -rf` matches `rm -rf /tmp`, but **NOT** `rm -r /tmp`
+- First word uses base name: `/usr/bin/rm` is treated as `rm`
 
 **Workflow:**
 

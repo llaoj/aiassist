@@ -12,15 +12,15 @@
 
 **文件**: `internal/config/config.go`
 
-在配置结构体中添加了 `CommandBlacklist` 字段：
+在配置结构体中添加了 `Blacklist` 字段：
 
 ```go
 type Config struct {
-    Language         string            `yaml:"language"`
-    DefaultModel     string            `yaml:"default_model"`
-    Consul           *ConsulConfig     `yaml:"consul,omitempty"`
-    Providers        []*ProviderConfig `yaml:"providers"`
-    CommandBlacklist []string          `yaml:"command_blacklist,omitempty"` // 新增
+    Language     string            `yaml:"language"`
+    DefaultModel string            `yaml:"default_model"`
+    Consul       *ConsulConfig     `yaml:"consul,omitempty"`
+    Providers    []*ProviderConfig `yaml:"providers"`
+    Blacklist    []string          `yaml:"blacklist,omitempty"` // Command blacklist
     // ...
 }
 ```
@@ -28,32 +28,35 @@ type Config struct {
 添加了获取命令黑名单的方法：
 
 ```go
-func (c *Config) GetCommandBlacklist() []string
+func (c *Config) GetBlacklist() []string
 ```
 
 ### 2. 命令黑名单检查模块
 
-**文件**: `internal/cmdblacklist/command_blacklist.go` (新建)
+**文件**: `internal/blacklist/blacklist.go`
 
 核心功能：
-- `IsCommandBlacklisted(command string) (bool, string)`: 检查命令是否在黑名单中
-- `FormatCommandBlacklistForPrompt() string`: 格式化黑名单用于AI提示
+- `IsBlacklisted(command string) (bool, string)`: 检查命令是否在黑名单中
+- `FormatBlacklistForPrompt() string`: 格式化黑名单用于AI提示
 
-模式匹配支持：
-- 支持 `*` 通配符匹配（前缀匹配）
-- 示例：
-  - `rm *` 匹配所有以 `rm` 开头的命令
-  - `kubectl delete *` 匹配所有 kubectl delete 操作
-  - `shutdown` 精确匹配
+模式匹配规则：
+1. 词级匹配：pattern 和命令都按空格分词后逐词比较
+2. 尾部 `*` 匹配剩余所有参数（至少一个）：
+   - `rm *` 匹配 `rm -rf /` 和 `rm file.txt`，但不匹配 `rm`
+   - `kubectl delete *` 匹配 `kubectl delete pod nginx`，但不匹配 `kubectl delete`
+3. 无 `*` 时只需前缀词匹配（允许额外参数）：
+   - `shutdown` 匹配 `shutdown` 和 `shutdown -h now`
+   - `rm -rf` 匹配 `rm -rf /tmp`，但不匹配 `rm -r /tmp`
+4. 首词取 base name：`/usr/bin/rm` 等同于 `rm`
 
 ### 3. 执行器集成
 
 **文件**: `internal/executor/executor.go`
 
 修改内容：
-- 添加 `cmdBlacklistChecker` 字段
+- 添加 `blacklistChecker` 字段
 - `DisplayCommand()` 方法显示黑名单警告
-- 新增 `IsCommandBlacklisted()` 方法
+- 新增 `IsBlacklisted()` 方法
 
 **文件**: `internal/interactive/session.go`
 
@@ -64,11 +67,11 @@ func (c *Config) GetCommandBlacklist() []string
 
 ### 4. AI提示集成
 
-**文件**: `internal/prompt/prompts.go`
+**文件**: `internal/prompt/prompts.go` 和 `internal/prompt/prompts_base.go`
 
 修改内容：
 - 修改了 `GetInteractivePrompt()`、`GetContinueAnalysisPrompt()`、`GetPipeAnalysisPrompt()`
-- 添加 `getCommandBlacklistPrompt()` 函数，将黑名单信息注入系统提示
+- 通过 `injectBlacklist()` 函数将黑名单信息注入系统提示
 
 AI被告知的黑名单规则：
 ```
@@ -79,7 +82,9 @@ AI被告知的黑名单规则：
 
 The above commands are blacklisted and forbidden to execute. You should:
 1. Avoid generating these commands - use alternatives when possible
-2. If a blacklisted command is absolutely necessary, clearly inform the user
+2. If a blacklisted command is absolutely necessary, clearly inform the user:
+   - State that the command is in the blacklist
+   - Explain why permission is needed
 3. Never assume blacklisted commands will execute successfully
 ```
 
@@ -99,11 +104,11 @@ The above commands are blacklisted and forbidden to execute. You should:
 添加了黑名单配置示例和说明：
 
 ```yaml
-command_blacklist:
-  - "rm *"               # 禁止所有 rm 命令
+blacklist:
+  - "rm *"               # 禁止所有带参数的 rm 命令
   - "dd *"               # 禁止 dd 命令（危险磁盘操作）
   - "kubectl delete *"   # 禁止 kubectl delete 操作
-  - ":(){ :|:& };:"      # 禁止 fork 炸弹
+  - "shutdown"           # 禁止 shutdown 命令（无论是否有参数）
 ```
 
 ### 7. 文档更新
@@ -119,14 +124,17 @@ command_blacklist:
 
 ### 8. 单元测试
 
-**文件**: `internal/cmdblacklist/command_blacklist_test.go` (新建)
+**文件**: `internal/blacklist/blacklist_test.go`
 
 测试覆盖：
-- `TestIsCommandBlacklisted`: 测试黑名单匹配逻辑
+- `TestIsBlacklisted`: 测试黑名单匹配逻辑
+  - 通配符匹配测试（`rm *` 匹配有参数的，不匹配无参数的）
+  - 多词 pattern 测试
   - 精确匹配测试
-  - 通配符匹配测试
+  - 无 `*` 时前缀匹配测试
+  - base name 归一化测试
   - 空黑名单测试
-- `TestFormatCommandBlacklistForPrompt`: 测试提示格式化
+- `TestFormatBlacklistForPrompt`: 测试提示格式化
 
 所有测试通过：✅
 
@@ -156,7 +164,7 @@ AI 分析（被告知黑名单）
 language: zh
 default_model: bailian/qwen-max
 
-command_blacklist:
+blacklist:
   - "rm *"
   - "dd *"
   - "kubectl delete *"
@@ -197,14 +205,37 @@ truncate -s 0 /var/log/app.log
 
 ### 模式匹配实现
 
-使用前缀匹配实现 `*` 通配符：
+使用词级匹配实现：
 
 ```go
-if strings.HasSuffix(pattern, "*") {
-    prefix := strings.TrimSuffix(pattern, "*")
-    if strings.HasPrefix(command, prefix) {
-        return true, pattern
+func matchPattern(pattern string, cmdParts []string) bool {
+    patParts := strings.Fields(pattern)
+    // ... 首词归一化为 base name ...
+
+    hasTrailingWildcard := patParts[len(patParts)-1] == "*"
+    if hasTrailingWildcard {
+        patParts = patParts[:len(patParts)-1]
     }
+
+    // 带 * 时命令词数必须大于 pattern 词数
+    // 不带 * 时命令词数只需 >= pattern 词数
+    if hasTrailingWildcard {
+        if len(cmdParts) <= len(patParts) {
+            return false
+        }
+    } else {
+        if len(cmdParts) < len(patParts) {
+            return false
+        }
+    }
+
+    // 逐词比较
+    for i, p := range patParts {
+        if cmdParts[i] != p {
+            return false
+        }
+    }
+    return true
 }
 ```
 
@@ -218,34 +249,24 @@ if strings.HasSuffix(pattern, "*") {
 - 提前知道哪些命令被禁止
 - 看到拒绝结果后提供替代方案
 
-## 命名规范
-
-所有命名都使用明确的 `command_blacklist` 而非模糊的 `blacklist`：
-- 配置字段：`CommandBlacklist`
-- YAML键：`command_blacklist`
-- 包名：`cmdblacklist`
-- 方法名：`IsCommandBlacklisted`、`GetCommandBlacklist`、`FormatCommandBlacklistForPrompt`
-- 变量名：`cmdBlacklistChecker`、`commandBlacklist`
-
-这样避免了歧义，明确表示这是命令的黑名单，而不是其他类型的黑名单。
-
 ## 测试结果
 
-- ✅ 单元测试全部通过
+- ✅ 单元测试全部通过（17 个测试用例）
 - ✅ 编译成功无错误
 - ✅ 代码符合Go规范
 
 ## 文件清单
 
-### 新建文件
-- `internal/cmdblacklist/command_blacklist.go`: 命令黑名单检查模块
-- `internal/cmdblacklist/command_blacklist_test.go`: 单元测试
+### 核心文件
+- `internal/blacklist/blacklist.go`: 命令黑名单检查模块
+- `internal/blacklist/blacklist_test.go`: 单元测试
 
-### 修改文件
+### 集成文件
 - `internal/config/config.go`: 添加命令黑名单配置支持
 - `internal/executor/executor.go`: 集成命令黑名单检查
 - `internal/interactive/session.go`: 执行前命令黑名单拦截
 - `internal/prompt/prompts.go`: 命令黑名单提示注入
+- `internal/prompt/prompts_base.go`: 黑名单提示模板
 - `internal/i18n/messages_zh.go`: 中文消息
 - `internal/i18n/messages_en.go`: 英文消息
 - `config.example.yaml`: 配置示例
@@ -259,5 +280,3 @@ if strings.HasSuffix(pattern, "*") {
 ✅ 文档与代码同步更新
 ✅ 遵循现有架构模式
 ✅ 添加完整单元测试
-✅ 命名清晰明确，避免歧义
-
