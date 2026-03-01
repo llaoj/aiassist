@@ -56,15 +56,3 @@ func Setup(lang string) context.Context {
 
 	return globalCtx
 }
-
-// GetContext returns the global interrupt context
-func GetContext() context.Context {
-	return globalCtx
-}
-
-// Cancel cancels the global context (for cleanup)
-func Cancel() {
-	if globalCancel != nil {
-		globalCancel()
-	}
-}

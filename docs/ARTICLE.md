@@ -384,12 +384,12 @@ providers:
     enabled: true
     models:
       - name: gpt-4
-        enable: true
+        enabled: true
   - name: deepseek
     enabled: true
     models:
       - name: deepseek-chat
-        enable: true
+        enabled: true
 ```
 
 当某个模型不可用时，自动切换到下一个，并在终端提示切换原因。
@@ -548,16 +548,16 @@ providers:
     enabled: true
     models:
       - name: qwen-max
-        enable: true
+        enabled: true
       - name: qwen-plus
-        enable: true
+        enabled: true
   - name: openai
     base_url: https://api.openai.com/v1
     api_key: sk-xxxxxxxxxxxx
     enabled: true
     models:
       - name: gpt-4
-        enable: true
+        enabled: true
 ```
 
 #### Consul 配置中心模式
@@ -578,7 +578,7 @@ providers:
     enabled: true
     models:
       - name: company-llm-v1
-        enable: true
+        enabled: true
 EOF
 
 # 写入 Consul

@@ -129,7 +129,7 @@ Use **Consul** for centralized configuration management, with all hosts loading 
        enabled: true
        models:
          - name: qwen-max
-           enable: true
+           enabled: true
    ```
 
 3. **Configure local file** (`~/.aiassist/config.yaml`):
@@ -181,9 +181,9 @@ providers:
     enabled: true
     models:
       - name: qwen-max
-        enable: true
+        enabled: true
       - name: qwen-plus
-        enable: true
+        enabled: true
 ```
 
 ---

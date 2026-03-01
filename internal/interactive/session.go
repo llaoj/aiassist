@@ -278,8 +278,6 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 	s.recursionDepth++
 	defer func() { s.recursionDepth-- }()
 
-	executedAny := false
-
 	for _, cmd := range commands {
 		fmt.Println()
 		s.executor.DisplayCommand(cmd.Text, cmd.Type, s.translator)
@@ -294,11 +292,7 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 				s.translator.T("interactive.executed_command"), cmd.Text,
 				"Blacklist Rejection", s.translator.T("executor.blacklisted", pattern))
 
-			if !executedAny {
-				executedAny = true
-				return s.analyzeCommandOutput(blacklistResult)
-			}
-			continue
+			return s.analyzeCommandOutput(blacklistResult)
 		}
 
 		confirmed, err := s.confirmCommandExecution(cmd.Type)
@@ -340,19 +334,12 @@ func (s *Session) handleCommands(commands []executor.Command) error {
 				s.translator.T("interactive.execution_output"), output)
 		}
 
-		// Record first executed command and analyze its output (whether success or failure)
-		if !executedAny {
-			executedAny = true
-			return s.analyzeCommandOutput(executionResult)
-		}
+		return s.analyzeCommandOutput(executionResult)
 	}
 
-	if !executedAny {
-		fmt.Println()
-		color.Green(s.translator.T("interactive.analysis_complete") + "\n")
-		return nil
-	}
-
+	// If we reach here, all commands were rejected by user
+	fmt.Println()
+	color.Green(s.translator.T("interactive.analysis_complete") + "\n")
 	return nil
 }
 

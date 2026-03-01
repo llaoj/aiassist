@@ -49,28 +49,3 @@ func LoadFromConsul(consulCfg *ConsulConfig) (*Config, error) {
 
 	return cfg, nil
 }
-
-func SaveToConsul(consulCfg *ConsulConfig, cfg *Config) error {
-	client, err := createConsulClient(consulCfg)
-	if err != nil {
-		return err
-	}
-
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to serialize config: %w", err)
-	}
-
-	kv := client.KV()
-	pair := &api.KVPair{
-		Key:   consulCfg.Key,
-		Value: data,
-	}
-
-	_, err = kv.Put(pair, nil)
-	if err != nil {
-		return fmt.Errorf("failed to save config to consul: %w", err)
-	}
-
-	return nil
-}

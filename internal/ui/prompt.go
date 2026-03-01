@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"syscall"
 
@@ -12,15 +11,10 @@ import (
 	"github.com/llaoj/aiassist/internal/i18n"
 )
 
-// Common errors - no longer needed since all exits trigger SIGINT
-// Removed: ErrUserAbort, ErrUserExit, ErrUserDone
-
 // inputModel is a custom text input model using bubbletea
 type inputModel struct {
 	textInput textinput.Model
 	prompt    string
-	quitting  bool
-	err       error
 }
 
 func newInputModel(prompt string) inputModel {
@@ -60,9 +54,6 @@ func (m inputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m inputModel) View() string {
-	if m.quitting {
-		return ""
-	}
 	return m.prompt + "\n" + m.textInput.View()
 }
 
@@ -71,8 +62,6 @@ type selectModel struct {
 	prompt   string
 	options  []string
 	selected int
-	quitting bool
-	err      error
 }
 
 func newSelectModel(prompt string, options []string) selectModel {
@@ -113,10 +102,6 @@ func (m selectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m selectModel) View() string {
-	if m.quitting {
-		return ""
-	}
-
 	var b strings.Builder
 	b.WriteString(m.prompt + "\n\n")
 
@@ -142,10 +127,6 @@ func PromptInput(prompt string, translator *i18n.I18n) (string, error) {
 	}
 
 	m := final.(inputModel)
-	if m.err != nil {
-		return "", m.err
-	}
-
 	return m.textInput.Value(), nil
 }
 
@@ -160,58 +141,5 @@ func PromptConfirm(prompt string, translator *i18n.I18n) (bool, error) {
 	}
 
 	m := final.(selectModel)
-	if m.err != nil {
-		return false, m.err
-	}
-
 	return m.selected == 0, nil
-}
-
-// PromptConfirmWithDefault displays a confirmation prompt with a default value
-func PromptConfirmWithDefault(prompt string, defaultValue bool, translator *i18n.I18n) (bool, error) {
-	options := []string{"Yes", "No"}
-	model := newSelectModel(prompt, options)
-
-	// Set default selection
-	if defaultValue {
-		model.selected = 0 // Yes
-	} else {
-		model.selected = 1 // No
-	}
-
-	p := tea.NewProgram(model)
-	final, err := p.Run()
-	if err != nil {
-		return false, fmt.Errorf("confirmation error: %w", err)
-	}
-
-	m := final.(selectModel)
-	if m.err != nil {
-		return false, m.err
-	}
-
-	return m.selected == 0, nil
-}
-
-// PromptSelect displays a selection list and returns the selected option
-func PromptSelect(prompt string, options []string) (string, error) {
-	model := newSelectModel(prompt, options)
-	p := tea.NewProgram(model)
-	final, err := p.Run()
-	if err != nil {
-		return "", fmt.Errorf("selection error: %w", err)
-	}
-
-	m := final.(selectModel)
-	if m.err != nil {
-		return "", m.err
-	}
-
-	return m.options[m.selected], nil
-}
-
-// IsTerminal returns true if stdout is a terminal
-func IsTerminal() bool {
-	fileInfo, _ := os.Stdout.Stat()
-	return (fileInfo.Mode() & os.ModeCharDevice) != 0
 }

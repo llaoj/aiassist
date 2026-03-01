@@ -49,10 +49,6 @@ func (m *Manager) RegisterModel(model Model) {
 	m.models = append(m.models, model)
 }
 
-func (m *Manager) CallWithFallback(ctx context.Context, prompt string) (string, string, error) {
-	return m.CallWithFallbackSystemPrompt(ctx, "", prompt)
-}
-
 func (m *Manager) CallWithFallbackSystemPrompt(ctx context.Context, systemPrompt string, userPrompt string) (string, string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

@@ -59,7 +59,7 @@ providers:
     enabled: true
     models:
       - name: qwen-max
-        enable: true
+        enabled: true
 ```
 
 ### 3. 写入配置到 Consul
@@ -82,9 +82,9 @@ providers:
     enabled: true
     models:
       - name: qwen-max
-        enable: true
+        enabled: true
       - name: qwen-plus
-        enable: true
+        enabled: true
   deepseek:
     name: deepseek
     base_url: https://api.deepseek.com/v1
@@ -108,7 +108,7 @@ providers:
     enabled: true
     models:
       - name: qwen-max
-        enable: true
+        enabled: true
 EOF
 
 # 写入 Consul
@@ -172,7 +172,7 @@ providers:
     enabled: true
     models:
       - name: qwen-max
-        enable: true
+        enabled: true
 ```
 
 **工作流程：**
@@ -286,7 +286,7 @@ providers:
     enabled: true
     models:
       - name: llm-v1
-        enable: true
+        enabled: true
 EOF
 
 # 上传到 Consul

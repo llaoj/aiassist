@@ -283,10 +283,6 @@ func (s *SystemInfo) FormatAsContext() string {
 	return sb.String()
 }
 
-func (s *SystemInfo) String() string {
-	return s.FormatAsContext()
-}
-
 func detectContainer() bool {
 	// Check for Docker
 	if _, err := os.Stat("/.dockerenv"); err == nil {

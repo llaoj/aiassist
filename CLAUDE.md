@@ -104,13 +104,13 @@ providers:
   - name: bailian  # First tried
     models:
       - name: qwen-plus  # 1st choice
-        enable: true
+        enabled: true
       - name: qwen-max   # 2nd choice
-        enable: true
+        enabled: true
   - name: openai   # Second tried if bailian fails
     models:
       - name: gpt-4      # 3rd choice
-        enable: true
+        enabled: true
 ```
 
 The manager tries each enabled model in this exact order. If a model returns an error, it's marked unavailable and skipped.

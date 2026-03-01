@@ -177,7 +177,7 @@ aiassist 支持两种配置模式：
        enabled: true
        models:
          - name: qwen-max
-           enable: true
+           enabled: true
    ```
 
 3. **配置本地文件** (`~/.aiassist/config.yaml`):
@@ -234,9 +234,9 @@ providers:
     enabled: true
     models:
       - name: qwen-plus
-        enable: true
+        enabled: true
       - name: qwen-turbo
-        enable: true
+        enabled: true
 
   - name: openai
     base_url: https://api.openai.com/v1
@@ -244,9 +244,9 @@ providers:
     enabled: true
     models:
       - name: gpt-4
-        enable: true
+        enabled: true
       - name: gpt-3.5-turbo
-        enable: false
+        enabled: false
 ```
 
 ### 模型调用顺序
