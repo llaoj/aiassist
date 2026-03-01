@@ -1,9 +1,9 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
-	"syscall"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,10 +11,15 @@ import (
 	"github.com/llaoj/aiassist/internal/i18n"
 )
 
+// ErrInterrupted is returned when the user presses Ctrl+C inside a prompt.
+// The caller should treat this as a clean exit request.
+var ErrInterrupted = errors.New("interrupted")
+
 // inputModel is a custom text input model using bubbletea
 type inputModel struct {
-	textInput textinput.Model
-	prompt    string
+	textInput   textinput.Model
+	prompt      string
+	interrupted bool // set to true when user pressed Ctrl+C
 }
 
 func newInputModel(prompt string) inputModel {
@@ -41,9 +46,9 @@ func (m inputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			return m, tea.Quit
 		case tea.KeyCtrlC:
-			// Send SIGINT to trigger global interrupt handler
-			// This unifies all exit logic in one place
-			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+			// Let BubbleTea quit cleanly so it can restore the terminal.
+			// The caller checks m.interrupted to decide whether to exit.
+			m.interrupted = true
 			return m, tea.Quit
 		}
 	}
@@ -59,9 +64,10 @@ func (m inputModel) View() string {
 
 // selectModel is a custom select model using bubbletea
 type selectModel struct {
-	prompt   string
-	options  []string
-	selected int
+	prompt      string
+	options     []string
+	selected    int
+	interrupted bool // set to true when user pressed Ctrl+C
 }
 
 func newSelectModel(prompt string, options []string) selectModel {
@@ -83,9 +89,9 @@ func (m selectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			return m, tea.Quit
 		case tea.KeyCtrlC:
-			// Send SIGINT to trigger global interrupt handler
-			// This unifies all exit logic in one place
-			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+			// Let BubbleTea quit cleanly so it can restore the terminal.
+			// The caller checks m.interrupted to decide whether to exit.
+			m.interrupted = true
 			return m, tea.Quit
 		case tea.KeyUp, tea.KeyLeft:
 			if m.selected > 0 {
@@ -116,9 +122,9 @@ func (m selectModel) View() string {
 	return b.String()
 }
 
-// PromptInput displays an input prompt and returns the user's input
+// PromptInput displays an input prompt and returns the user's input.
+// Returns ErrInterrupted if the user pressed Ctrl+C.
 func PromptInput(prompt string, translator *i18n.I18n) (string, error) {
-	// Use custom bubbletea input for better control
 	model := newInputModel(prompt)
 	p := tea.NewProgram(model)
 	final, err := p.Run()
@@ -127,10 +133,14 @@ func PromptInput(prompt string, translator *i18n.I18n) (string, error) {
 	}
 
 	m := final.(inputModel)
+	if m.interrupted {
+		return "", ErrInterrupted
+	}
 	return m.textInput.Value(), nil
 }
 
-// PromptConfirm displays a confirmation prompt and returns the result
+// PromptConfirm displays a confirmation prompt and returns the result.
+// Returns ErrInterrupted if the user pressed Ctrl+C.
 func PromptConfirm(prompt string, translator *i18n.I18n) (bool, error) {
 	options := []string{"Yes", "No"}
 	model := newSelectModel(prompt, options)
@@ -141,5 +151,8 @@ func PromptConfirm(prompt string, translator *i18n.I18n) (bool, error) {
 	}
 
 	m := final.(selectModel)
+	if m.interrupted {
+		return false, ErrInterrupted
+	}
 	return m.selected == 0, nil
 }

@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -141,6 +142,11 @@ func (s *Session) confirmCommandExecution(cmdType executor.CommandType) (bool, e
 func (s *Session) askConfirmation(prompt string) (bool, error) {
 	confirmed, err := ui.PromptConfirm(prompt, s.translator)
 	if err != nil {
+		if errors.Is(err, ui.ErrInterrupted) {
+			fmt.Println()
+			fmt.Println(s.translator.T("interactive.goodbye"))
+			os.Exit(0)
+		}
 		return false, err
 	}
 
@@ -248,6 +254,13 @@ func (s *Session) runInteractiveLoop() error {
 		prompt := s.translator.T("interactive.input_prompt")
 		userInput, err := s.readUserInput(prompt)
 		if err != nil {
+			if errors.Is(err, ui.ErrInterrupted) {
+				// User pressed Ctrl+C — BubbleTea has already restored the terminal.
+				// Print goodbye and exit cleanly.
+				fmt.Println()
+				fmt.Println(s.translator.T("interactive.goodbye"))
+				os.Exit(0)
+			}
 			color.Red("Error: %v\n", err)
 			continue
 		}

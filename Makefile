@@ -1,10 +1,14 @@
-.PHONY: build build-all clean help
+.PHONY: build build-all clean fmt help
 
 build: ## Build the binary for current platform
 	@./scripts/build.sh
 
 build-all: ## Build for all platforms
 	@./scripts/build-all.sh
+
+fmt: ## Format all Go source files
+	@gofmt -w -s .
+	@echo "✓ Formatted"
 
 clean: ## Remove built binaries
 	@rm -f aiassist

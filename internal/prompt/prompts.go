@@ -68,4 +68,3 @@ func injectBlacklist(prompt string) string {
 	// Replace placeholder with actual blacklist
 	return strings.ReplaceAll(prompt, "{{COMMAND_BLACKLIST}}", blacklistText)
 }
-

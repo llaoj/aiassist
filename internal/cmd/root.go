@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	appVersion  = "unknown"
-	appCommit   = "unknown"
+	appVersion   = "unknown"
+	appCommit    = "unknown"
 	appBuildDate = "unknown"
 )
 

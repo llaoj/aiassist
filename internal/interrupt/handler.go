@@ -8,8 +8,8 @@ import (
 	"sync"
 	"syscall"
 
-	"golang.org/x/term"
 	"github.com/llaoj/aiassist/internal/i18n"
+	"golang.org/x/term"
 )
 
 var (
@@ -27,8 +27,9 @@ func Setup(lang string) context.Context {
 		globalCtx, globalCancel = context.WithCancel(context.Background())
 		translator = i18n.New(lang)
 
-		// Save original terminal state
-		if fd := int(os.Stdout.Fd()); term.IsTerminal(fd) {
+		// Save original terminal state from stdin (fd 0), which is what
+		// BubbleTea puts into raw mode when reading keyboard input
+		if fd := int(os.Stdin.Fd()); term.IsTerminal(fd) {
 			if state, err := term.GetState(fd); err == nil {
 				termState = state
 			}
@@ -39,10 +40,11 @@ func Setup(lang string) context.Context {
 
 		go func() {
 			<-sigChan
-			// Restore terminal to normal mode before exit
-			// This is critical when exiting from Bubble Tea's raw mode
+			// Restore terminal stdin to normal mode before exit.
+			// BubbleTea puts stdin (fd 0) into raw mode; we must restore it here
+			// because BubbleTea's own cleanup may not run when we call os.Exit.
 			if termState != nil {
-				if fd := int(os.Stdout.Fd()); term.IsTerminal(fd) {
+				if fd := int(os.Stdin.Fd()); term.IsTerminal(fd) {
 					term.Restore(fd, termState)
 				}
 			}
